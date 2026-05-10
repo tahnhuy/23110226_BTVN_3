@@ -1,19 +1,22 @@
 const { normalizeEmailForAuth } = require('./normalizeEmail');
 
 const REGISTER_OTP_PREFIX = 'register:otp:';
+const FORGOT_OTP_PREFIX = 'forgot:otp:';
+const EDIT_PROFILE_OTP_PREFIX = 'edit_profile:otp:';
 
-const otpKey = (email) => `${REGISTER_OTP_PREFIX}${String(email).toLowerCase()}`;
+const otpKey = (prefix, email) => `${prefix}${String(email).toLowerCase()}`;
 
-/** Hai biến thể email (Gmail chuẩn vs bản gõ thường) → cùng một OTP được ghi cả hai key */
-const otpKeysForEmailInput = (email) => {
+const otpKeysForEmailInput = (prefix, email) => {
     const raw = String(email || '').trim();
     const canonical = normalizeEmailForAuth(email);
     const legacyLower = raw.toLowerCase();
-    return [...new Set([otpKey(canonical), otpKey(legacyLower)])];
+    return [...new Set([otpKey(prefix, canonical), otpKey(prefix, legacyLower)])];
 };
 
 module.exports = {
     otpKey,
     otpKeysForEmailInput,
-    REGISTER_OTP_PREFIX
+    REGISTER_OTP_PREFIX,
+    FORGOT_OTP_PREFIX,
+    EDIT_PROFILE_OTP_PREFIX
 };

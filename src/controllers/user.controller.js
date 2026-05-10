@@ -10,6 +10,16 @@ const getMe = async (req, res, next) => {
     }
 };
 
+const requestEditProfileOtp = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const result = await userService.requestEditProfileOtp(userId);
+        return successResponse(res, 200, result.message);
+    } catch (error) {
+        next(error);
+    }
+};
+
 /**
  * Controller: Cập nhật thông tin User (Edit Profile)
  * - Người dùng chỉ có thể cập nhật thông tin của chính họ (trừ phi là admin)
@@ -21,16 +31,18 @@ const editProfile = async (req, res, next) => {
         const userId = req.user.id; 
         
         // Lấy dữ liệu update từ body request
-        // Cần đảm bảo frontend chỉ gửi các trường được phép cập nhật (vd: username, status, v.v. Không gửi password ở đây)
-        const updateData = req.body;
+        // Cần đảm bảo frontend chỉ gửi các trường được phép cập nhật
+        const { otp, ...updateData } = req.body;
 
         // Xóa các trường không cho phép update trực tiếp qua API này
         delete updateData.password;
         delete updateData.role; 
         delete updateData.id;
+        delete updateData.email; // Không cho đổi email qua API này để tránh phức tạp hóa OTP logic
+        delete updateData.username; // Không cho đổi username
 
         // Gọi service xử lý nghiệp vụ
-        const updatedUser = await userService.updateUserProfile(userId, updateData);
+        const updatedUser = await userService.updateUserProfile(userId, updateData, otp);
 
         // Trả về response thành công
         return successResponse(res, 200, 'Profile updated successfully', {
@@ -38,6 +50,9 @@ const editProfile = async (req, res, next) => {
                 id: updatedUser.id,
                 username: updatedUser.username,
                 email: updatedUser.email,
+                fullName: updatedUser.fullName,
+                phone: updatedUser.phone,
+                address: updatedUser.address,
                 role: updatedUser.role,
                 status: updatedUser.status
             }
@@ -49,5 +64,6 @@ const editProfile = async (req, res, next) => {
 
 module.exports = {
     getMe,
+    requestEditProfileOtp,
     editProfile
 };

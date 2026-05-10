@@ -7,20 +7,20 @@ const redisClient = require('../config/redis');
 const { generateAccessToken, generateRefreshToken } = require('../utils/tokenGenerator');
 const { normalizeEmailForAuth } = require('../utils/normalizeEmail');
 const { normalizeOtpDigits } = require('../utils/otpDigits');
-const { otpKeysForEmailInput } = require('../utils/otpRedisKeys');
-const { sendActivationOtp } = require('./mail.service');
+const { otpKeysForEmailInput, REGISTER_OTP_PREFIX, FORGOT_OTP_PREFIX } = require('../utils/otpRedisKeys');
+const { sendActivationOtp, sendForgotPasswordOtp } = require('./mail.service');
 
 const OTP_TTL_SEC = Number(process.env.OTP_TTL_SECONDS) || 600;
 
-const redisSetOtp = async (emailInput, otp) => {
-    const keys = otpKeysForEmailInput(emailInput);
+const redisSetOtp = async (prefix, emailInput, otp) => {
+    const keys = otpKeysForEmailInput(prefix, emailInput);
     for (const k of keys) {
         await redisClient.set(k, otp, { EX: OTP_TTL_SEC });
     }
 };
 
-const redisClearOtp = async (emailInput) => {
-    const keys = otpKeysForEmailInput(emailInput);
+const redisClearOtp = async (prefix, emailInput) => {
+    const keys = otpKeysForEmailInput(prefix, emailInput);
     for (const k of keys) {
         await redisClient.del(k);
     }
@@ -77,13 +77,13 @@ const registerUser = async ({ username, email, password }) => {
     });
 
     const otp = generateOtp();
-    await redisSetOtp(email, otp);
+    await redisSetOtp(REGISTER_OTP_PREFIX, email, otp);
 
     try {
         await sendActivationOtp(normalizedEmail, otp, OTP_TTL_SEC);
     } catch (e) {
         await user.destroy();
-        await redisClearOtp(email);
+        await redisClearOtp(REGISTER_OTP_PREFIX, email);
         console.error('[register] Gửi OTP thất bại:', e.message || e);
 
         const detail =
@@ -114,7 +114,7 @@ const verifyActivation = async ({ email, otp }) => {
         throw err;
     }
 
-    const keys = otpKeysForEmailInput(email);
+    const keys = otpKeysForEmailInput(REGISTER_OTP_PREFIX, email);
     const storedVals = await Promise.all(keys.map((k) => redisClient.get(k)));
     let otpValid = false;
     let anyStored = false;
@@ -156,14 +156,14 @@ const verifyActivation = async ({ email, otp }) => {
     }
 
     if (user.status === 'active') {
-        await redisClearOtp(email);
+        await redisClearOtp(REGISTER_OTP_PREFIX, email);
         const err = new Error('Tài khoản đã được kích hoạt');
         err.statusCode = 400;
         throw err;
     }
 
     await user.update({ status: 'active' });
-    await redisClearOtp(email);
+    await redisClearOtp(REGISTER_OTP_PREFIX, email);
 
     return { message: 'Kích hoạt tài khoản thành công. Bạn có thể đăng nhập.' };
 };
@@ -184,7 +184,7 @@ const resendActivationOtp = async ({ email }) => {
     }
 
     const otp = generateOtp();
-    await redisSetOtp(email, otp);
+    await redisSetOtp(REGISTER_OTP_PREFIX, email, otp);
     await sendActivationOtp(user.email, otp, OTP_TTL_SEC);
 
     return { message: 'Đã gửi lại mã OTP. Kiểm tra email.' };
@@ -221,10 +221,13 @@ const loginUser = async ({ email, password }) => {
     const payload = { sub: user.id, role: user.role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken({ sub: user.id });
+    
+    const redirectUrl = user.role === 'admin' ? '/admin/profile' : '/user/profile';
 
     return {
         accessToken,
         refreshToken,
+        redirectUrl,
         user: {
             id: user.id,
             username: user.username,
@@ -233,6 +236,61 @@ const loginUser = async ({ email, password }) => {
             status: user.status
         }
     };
+};
+
+const forgotPassword = async (email) => {
+    const user = await findUserByEmailVariants(email);
+    if (!user) {
+        // Tránh lộ lọt email, luôn báo thành công
+        return { message: 'Nếu email tồn tại, OTP đã được gửi đến bạn.' };
+    }
+
+    if (user.status === 'banned') {
+        const err = new Error('Tài khoản đã bị khóa');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    const otp = generateOtp();
+    await redisSetOtp(FORGOT_OTP_PREFIX, email, otp);
+    await sendForgotPasswordOtp(user.email, otp, OTP_TTL_SEC);
+
+    return { message: 'Nếu email tồn tại, OTP đã được gửi đến bạn.' };
+};
+
+const resetPassword = async ({ email, otp, newPassword }) => {
+    const otpDigits = normalizeOtpDigits(otp);
+
+    const keys = otpKeysForEmailInput(FORGOT_OTP_PREFIX, email);
+    const storedVals = await Promise.all(keys.map((k) => redisClient.get(k)));
+    let otpValid = false;
+
+    for (let i = 0; i < keys.length; i += 1) {
+        const raw = storedVals[i];
+        if (raw && normalizeOtpDigits(raw) === otpDigits) {
+            otpValid = true;
+            break;
+        }
+    }
+
+    if (!otpValid) {
+        const err = new Error('OTP không đúng hoặc đã hết hạn');
+        err.statusCode = 400;
+        throw err;
+    }
+
+    const user = await findUserByEmailVariants(email);
+    if (!user) {
+        const err = new Error('Không tìm thấy tài khoản');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await user.update({ password: passwordHash });
+    await redisClearOtp(FORGOT_OTP_PREFIX, email);
+
+    return { message: 'Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập bằng mật khẩu mới.' };
 };
 
 const refreshSession = async (refreshToken) => {
@@ -274,5 +332,7 @@ module.exports = {
     verifyActivation,
     resendActivationOtp,
     loginUser,
-    refreshSession
+    refreshSession,
+    forgotPassword,
+    resetPassword
 };

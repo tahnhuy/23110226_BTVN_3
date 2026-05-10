@@ -13,7 +13,9 @@ const {
     loginValidation,
     verifyEmailValidation,
     resendOtpValidation,
-    refreshTokenValidation
+    refreshTokenValidation,
+    forgotPasswordValidation,
+    resetPasswordValidation
 } = require('../validators/auth.validator');
 
 const router = express.Router();
@@ -50,6 +52,22 @@ router.post(
     refreshTokenValidation,
     validate,
     authController.refresh
+);
+
+router.post(
+    '/forgot-password',
+    authResendLimiter, // Reuse resend limiter
+    forgotPasswordValidation,
+    validate,
+    authController.forgotPassword
+);
+
+router.post(
+    '/reset-password',
+    authVerifyLimiter, // Reuse verify limiter
+    resetPasswordValidation,
+    validate,
+    authController.resetPassword
 );
 
 module.exports = router;

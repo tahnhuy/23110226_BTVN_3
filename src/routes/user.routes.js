@@ -9,11 +9,21 @@ const router = express.Router();
 router.use(verifyToken);
 
 const editProfileValidation = [
-    body('username').optional().isString().withMessage('Username must be a string'),
-    body('email').optional().isEmail().withMessage('Invalid email format')
+    body('otp')
+        .notEmpty().withMessage('OTP là bắt buộc')
+        .matches(/^\d{6}$/).withMessage('OTP phải có đúng 6 chữ số'),
+    body('fullName').optional().isString().withMessage('FullName must be a string'),
+    body('phone').optional().isString().withMessage('Phone must be a string'),
+    body('address').optional().isString().withMessage('Address must be a string')
 ];
 
 router.get('/me', requirePermission('profile:read'), userController.getMe);
+
+router.post(
+    '/profile/request-otp',
+    requirePermission('profile:update'),
+    userController.requestEditProfileOtp
+);
 
 router.put(
     '/profile',
