@@ -141,6 +141,32 @@
 						"url": "{{baseUrl}}/api/auth/refresh",
 						"description": "Cần refreshToken (sau Login). Cập nhật biến collection."
 					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/forgot-password",
+						"description": "Gửi yêu cầu khôi phục mật khẩu. Hệ thống sẽ gửi mã OTP vào email."
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/reset-password",
+						"description": "Đặt lại mật khẩu mới. Thay otp bằng mã 6 số từ email."
+					}
 				}
 			]
 		},
@@ -159,6 +185,17 @@
 					}
 				},
 				{
+					"name": "POST /profile/request-otp (profile:update)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"url": "{{baseUrl}}/api/users/profile/request-otp",
+						"description": "Yêu cầu mã OTP để sửa đổi Profile. Mã gửi vào email."
+					}
+				},
+				{
 					"name": "PUT /profile (profile:update)",
 					"request": {
 						"method": "PUT",
@@ -168,10 +205,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"username\": \"{{userName}}_updated\"\n}"
+							"raw": "{\n  \"otp\": \"123456\",\n  \"fullName\": \"Tài Đặng\",\n  \"phone\": \"0987654321\",\n  \"address\": \"Hồ Chí Minh\"\n}"
 						},
 						"url": "{{baseUrl}}/api/users/profile",
-						"description": "Quyền profile:update. Không gửi password/role."
+						"description": "Cập nhật profile với mã OTP. Các trường email/username không cho phép đổi ở đây."
 					}
 				}
 			]

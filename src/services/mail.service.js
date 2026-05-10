@@ -1,5 +1,6 @@
 const sendEmail = require('../utils/sendEmail');
 const { buildActivationOtpEmail } = require('../utils/emailTemplates/activationOtp');
+const { buildGenericOtpEmail } = require('../utils/emailTemplates/genericOtp');
 
 /** Bật = chỉ in OTP ra console, không gửi SMTP (đặt OTP_DEV_CONSOLE=true trong .env). */
 const devConsoleOtpEnabled = () => {
@@ -12,11 +13,30 @@ const devConsoleOtpEnabled = () => {
     return true;
 };
 
-/**
- * @param {string} email
- * @param {string} otp
- * @param {number} [ttlSeconds=600] - must match Redis OTP TTL (for copy in email)
- */
+const sendGenericOtpEmail = async (email, otp, ttlSeconds, title, description) => {
+    const ttlMinutes = Math.max(1, Math.round(ttlSeconds / 60));
+
+    if (devConsoleOtpEnabled()) {
+        console.log(
+            `\n[UTEShop][OTP] Không gửi SMTP — OTP_DEV_CONSOLE=true\n` +
+                `  Email: ${email}\n` +
+                `  OTP:   ${otp}\n` +
+                `  Loại:  ${title}\n` +
+                `  TTL:   ~${ttlMinutes} phút (${ttlSeconds}s)\n`
+        );
+        return;
+    }
+
+    const { subject, text, html } = buildGenericOtpEmail(otp, ttlMinutes, title, description);
+
+    await sendEmail({
+        email,
+        subject,
+        message: text,
+        html
+    });
+};
+
 const sendActivationOtp = async (email, otp, ttlSeconds = 600) => {
     const ttlMinutes = Math.max(1, Math.round(ttlSeconds / 60));
 
@@ -40,4 +60,24 @@ const sendActivationOtp = async (email, otp, ttlSeconds = 600) => {
     });
 };
 
-module.exports = { sendActivationOtp };
+const sendForgotPasswordOtp = (email, otp, ttlSeconds = 600) => {
+    return sendGenericOtpEmail(
+        email,
+        otp,
+        ttlSeconds,
+        'Khôi phục mật khẩu',
+        'Dưới đây là mã xác minh để đặt lại mật khẩu cho tài khoản của bạn.'
+    );
+};
+
+const sendEditProfileOtp = (email, otp, ttlSeconds = 600) => {
+    return sendGenericOtpEmail(
+        email,
+        otp,
+        ttlSeconds,
+        'Xác thực cập nhật thông tin',
+        'Dưới đây là mã xác minh để xác nhận yêu cầu cập nhật thông tin cá nhân của bạn.'
+    );
+};
+
+module.exports = { sendActivationOtp, sendForgotPasswordOtp, sendEditProfileOtp };

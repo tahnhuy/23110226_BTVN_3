@@ -13,10 +13,10 @@ const startServer = async () => {
         await sequelize.authenticate();
         console.log('✅ MySQL (Docker) connected successfully.');
 
-        // Optional: Tự động tạo bảng User nếu chưa có (Có thể bật lên để test)
-        // const User = require('./models/user.model');
-        // await sequelize.sync({ alter: true });
-        // console.log('✅ MySQL Tables synchronized.');
+        // Tự động tạo bảng User nếu chưa có và cập nhật cột mới
+        const User = require('./models/user.model');
+        await sequelize.sync({ alter: true });
+        console.log('✅ MySQL Tables synchronized.');
 
         // 2. Kết nối Redis
         await redisClient.connect();

@@ -71,10 +71,52 @@ const refreshTokenValidation = [
     body('refreshToken').notEmpty().withMessage('refreshToken là bắt buộc')
 ];
 
+const forgotPasswordValidation = [
+    body('email')
+        .trim()
+        .notEmpty()
+        .withMessage('Email là bắt buộc')
+        .isEmail()
+        .withMessage('Email không hợp lệ')
+        .normalizeEmail()
+];
+
+const resetPasswordValidation = [
+    body('email')
+        .trim()
+        .notEmpty()
+        .withMessage('Email là bắt buộc')
+        .isEmail()
+        .withMessage('Email không hợp lệ')
+        .normalizeEmail(),
+    body('otp')
+        .trim()
+        .customSanitizer((v) =>
+            String(v ?? '')
+                .normalize('NFKC')
+                .replace(/\D/g, '')
+        )
+        .notEmpty()
+        .withMessage('OTP là bắt buộc')
+        .isLength({ min: 6, max: 6 })
+        .withMessage('OTP phải có đúng 6 chữ số')
+        .matches(/^\d{6}$/)
+        .withMessage('OTP chỉ gồm chữ số'),
+    body('newPassword')
+        .notEmpty()
+        .withMessage('Mật khẩu mới là bắt buộc')
+        .isLength({ min: 8 })
+        .withMessage('Mật khẩu ít nhất 8 ký tự')
+        .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
+        .withMessage('Mật khẩu phải có ít nhất một chữ cái và một chữ số')
+];
+
 module.exports = {
     registerValidation,
     loginValidation,
     verifyEmailValidation,
     resendOtpValidation,
-    refreshTokenValidation
+    refreshTokenValidation,
+    forgotPasswordValidation,
+    resetPasswordValidation
 };
