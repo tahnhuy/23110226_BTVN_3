@@ -1,6 +1,15 @@
 const userService = require('../services/user.service');
 const { successResponse } = require('../utils/responseHandler');
 
+const getMe = async (req, res, next) => {
+    try {
+        const user = await userService.getUserPublicById(req.user.id);
+        return successResponse(res, 200, 'OK', { user });
+    } catch (error) {
+        next(error);
+    }
+};
+
 /**
  * Controller: Cập nhật thông tin User (Edit Profile)
  * - Người dùng chỉ có thể cập nhật thông tin của chính họ (trừ phi là admin)
@@ -39,5 +48,6 @@ const editProfile = async (req, res, next) => {
 };
 
 module.exports = {
+    getMe,
     editProfile
 };

@@ -5,6 +5,7 @@ const errorHandler = require('./middlewares/error.middleware');
 // Import Routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(cookieParser());
 // --- BƯỚC 2: KHAI BÁO CÁC ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Xử lý Route không tồn tại
 app.all('*', (req, res, next) => {

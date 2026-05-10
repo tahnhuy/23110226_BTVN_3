@@ -29,6 +29,21 @@ const updateUserProfile = async (userId, updateData) => {
     return user;
 };
 
+const getUserPublicById = async (userId) => {
+    const user = await User.findByPk(userId, {
+        attributes: ['id', 'username', 'email', 'role', 'status', 'createdAt', 'updatedAt']
+    });
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return user;
+};
+
 module.exports = {
-    updateUserProfile
+    updateUserProfile,
+    getUserPublicById
 };

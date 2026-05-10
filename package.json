@@ -5,7 +5,11 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed": "node src/seeders/index.js",
+    "docker:seed": "docker compose run --rm seed",
+    "docker:up": "docker compose up -d",
+    "otp:peek": "node src/scripts/peekOtp.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -18,7 +22,8 @@
     "nodemailer": "^6.9.13",
     "redis": "^4.6.13",
     "sequelize": "^6.37.3",
-    "mysql2": "^3.9.7"
+    "mysql2": "^3.9.7",
+    "validator": "^13.15.23"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

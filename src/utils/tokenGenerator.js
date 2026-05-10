@@ -1,14 +1,17 @@
 const jwt = require('jsonwebtoken');
 
+const accessSecret = () => process.env.JWT_ACCESS_SECRET;
+const refreshSecret = () => process.env.JWT_REFRESH_SECRET;
+
 const generateAccessToken = (payload) => {
-    return jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m'
+    return jwt.sign(payload, accessSecret(), {
+        expiresIn: process.env.JWT_ACCESS_EXPIRATION || '15m'
     });
 };
 
 const generateRefreshToken = (payload) => {
-    return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-        expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d'
+    return jwt.sign(payload, refreshSecret(), {
+        expiresIn: process.env.JWT_REFRESH_EXPIRATION || '7d'
     });
 };
 

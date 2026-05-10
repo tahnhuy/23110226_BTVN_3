@@ -1,8 +1,11 @@
-// TODO: Viết middleware xử lý kết quả validation từ express-validator
 const { validationResult } = require('express-validator');
+const { errorResponse } = require('../utils/responseHandler');
 
 const validate = (req, res, next) => {
-    // Logic kiểm tra errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return errorResponse(res, 400, 'Validation failed', errors.array());
+    }
     next();
 };
 

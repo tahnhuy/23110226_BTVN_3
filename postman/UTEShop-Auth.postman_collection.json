@@ -1,0 +1,196 @@
+{
+	"info": {
+		"_postman_id": "e7f3a2b1-4c8d-4e9f-a0b1-uteshop2026",
+		"name": "UTEShop — Đăng ký / Đăng nhập / Phân quyền",
+		"description": "Import vào Postman. Chỉnh biến collection (Variables): baseUrl, userEmail, userPassword, userName.\nSau Login hoặc Refresh, accessToken/refreshToken được ghi tự động.\nAdmin: dùng adminEmail/adminPassword (seed) rồi Login để test GET /api/admin/users.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:3000" },
+		{ "key": "accessToken", "value": "" },
+		{ "key": "refreshToken", "value": "" },
+		{ "key": "userName", "value": "testuser_postman" },
+		{ "key": "userEmail", "value": "testuser_postman@example.com" },
+		{ "key": "userPassword", "value": "Testuser1" },
+		{ "key": "adminEmail", "value": "admin@uteshop.local" },
+		{ "key": "adminPassword", "value": "Admin123!" }
+	],
+	"item": [
+		{
+			"name": "1. Auth — Đăng ký / OTP / JWT",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{userName}}\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/register",
+						"description": "Tạo tài khoản inactive + gửi OTP email. Đổi userEmail nếu đã tồn tại."
+					}
+				},
+				{
+					"name": "Verify email (OTP)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"otp\": \"123456\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/verify-email",
+						"description": "Thay otp bằng mã 6 số từ email (hoặc Redis)."
+					}
+				},
+				{
+					"name": "Resend OTP",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/resend-otp",
+						"description": "Giới hạn 3 lần / giờ."
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const j = pm.response.json();",
+									"if (j.status === 'success' && j.data && j.data.accessToken) {",
+									"    pm.collectionVariables.set('accessToken', j.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', j.data.refreshToken);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/login",
+						"description": "Chỉ user đã verify (active). Script Test lưu accessToken + refreshToken."
+					}
+				},
+				{
+					"name": "Login (Admin seed)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const j = pm.response.json();",
+									"if (j.status === 'success' && j.data && j.data.accessToken) {",
+									"    pm.collectionVariables.set('accessToken', j.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', j.data.refreshToken);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/login",
+						"description": "Đăng nhập tài khoản admin từ seed (để test /api/admin)."
+					}
+				},
+				{
+					"name": "Refresh token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const j = pm.response.json();",
+									"if (j.status === 'success' && j.data && j.data.accessToken) {",
+									"    pm.collectionVariables.set('accessToken', j.data.accessToken);",
+									"    if (j.data.refreshToken) pm.collectionVariables.set('refreshToken', j.data.refreshToken);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/refresh",
+						"description": "Cần refreshToken (sau Login). Cập nhật biến collection."
+					}
+				}
+			]
+		},
+		{
+			"name": "2. User — Phân quyền (role user)",
+			"item": [
+				{
+					"name": "GET /me (profile:read)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"url": "{{baseUrl}}/api/users/me",
+						"description": "Cần JWT user/admin active. Quyền profile:read."
+					}
+				},
+				{
+					"name": "PUT /profile (profile:update)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{userName}}_updated\"\n}"
+						},
+						"url": "{{baseUrl}}/api/users/profile",
+						"description": "Quyền profile:update. Không gửi password/role."
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Admin — Phân quyền (role admin)",
+			"item": [
+				{
+					"name": "GET /admin/users (admin only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"url": "{{baseUrl}}/api/admin/users",
+						"description": "Trước đó chạy Login (Admin seed). User thường sẽ 403."
+					}
+				}
+			]
+		}
+	]
+}

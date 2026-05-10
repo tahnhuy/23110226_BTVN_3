@@ -1,0 +1,16 @@
+[
+  {
+    "username": "admin",
+    "email": "admin@uteshop.local",
+    "plainPassword": "Admin123!",
+    "role": "admin",
+    "status": "active"
+  },
+  {
+    "username": "demo",
+    "email": "demo@uteshop.local",
+    "plainPassword": "Demo123!",
+    "role": "user",
+    "status": "active"
+  }
+]
