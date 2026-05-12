@@ -1,5 +1,6 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
 const errorHandler = require('./middlewares/error.middleware');
 
 // Import Routes
@@ -10,6 +11,14 @@ const adminRoutes = require('./routes/admin.routes');
 const app = express();
 
 // --- BƯỚC 1: CÁC MIDDLEWARE CƠ BẢN ---
+const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+app.use(
+    cors({
+        origin: frontendOrigin,
+        credentials: true
+    })
+);
+
 // Parse JSON body
 app.use(express.json());
 

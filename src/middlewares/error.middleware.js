@@ -5,6 +5,9 @@ const errorHandler = (err, req, res, next) => {
         status: 'error',
         message: err.message || 'Internal Server Error'
     };
+    if (err.code && typeof err.code === 'string') {
+        body.code = err.code;
+    }
     if (process.env.NODE_ENV === 'development' && err.stack) {
         body.stack = err.stack;
     }
