@@ -107,6 +107,15 @@ const LoginPage = () => {
                             error={fieldErrors.password}
                         />
 
+                        <div className="flex justify-end pt-1">
+                            <Link
+                                to="/forgot-password"
+                                className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                            >
+                                Quên mật khẩu?
+                            </Link>
+                        </div>
+
                         <div className="pt-4">
                             <Button
                                 type="submit"

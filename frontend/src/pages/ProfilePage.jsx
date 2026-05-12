@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUserProfile } from '../store/profileSlice';
 import { logout } from '../store/authSlice';
 import ProfileForm from '../components/profile/ProfileForm';
+import ResetPasswordForm from '../components/profile/ResetPasswordForm';
 import Button from '../components/common/Button';
 import { FaUserCircle } from 'react-icons/fa';
 
@@ -12,6 +13,7 @@ const ProfilePage = () => {
     const navigate = useNavigate();
     const { user, isLoading, error } = useSelector((state) => state.profile);
     const authUser = useSelector((state) => state.auth.user);
+    const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'password'
 
     useEffect(() => {
         dispatch(fetchUserProfile());
@@ -66,8 +68,38 @@ const ProfilePage = () => {
                                     </span>
                                 </div>
 
+                                {/* Tabs Navigation */}
+                                <div className="max-w-2xl mx-auto mt-8 border-b border-gray-200">
+                                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                                        <button
+                                            onClick={() => setActiveTab('profile')}
+                                            className={`${
+                                                activeTab === 'profile'
+                                                    ? 'border-blue-500 text-blue-600'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+                                        >
+                                            Thông tin cá nhân
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('password')}
+                                            className={`${
+                                                activeTab === 'password'
+                                                    ? 'border-blue-500 text-blue-600'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+                                        >
+                                            Đổi mật khẩu
+                                        </button>
+                                    </nav>
+                                </div>
+
                                 {/* Form cập nhật */}
-                                <ProfileForm />
+                                {activeTab === 'profile' ? (
+                                    <ProfileForm />
+                                ) : (
+                                    <ResetPasswordForm email={user?.email || authUser?.email} />
+                                )}
                             </div>
                         )}
                     </>
