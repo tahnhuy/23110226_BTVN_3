@@ -1,9 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit';
+import authReducer from './authSlice';
 import profileReducer from './profileSlice';
 
 export const store = configureStore({
     reducer: {
-        profile: profileReducer,
-        // Sau này có thể thêm authReducer, cartReducer,...
-    },
+        auth: authReducer,
+        profile: profileReducer
+    }
 });

@@ -1,14 +1,17 @@
 import React from 'react';
 
-const InputField = ({ 
-    label, 
-    type = 'text', 
-    name, 
-    value, 
-    onChange, 
-    placeholder, 
+const InputField = ({
+    label,
+    type = 'text',
+    name,
+    value,
+    onChange,
+    placeholder,
     error,
-    readOnly = false
+    readOnly = false,
+    inputMode,
+    autoComplete,
+    maxLength
 }) => {
     return (
         <div className="mb-4">
@@ -25,6 +28,9 @@ const InputField = ({
                 onChange={onChange}
                 placeholder={placeholder}
                 readOnly={readOnly}
+                inputMode={inputMode}
+                autoComplete={autoComplete}
+                maxLength={maxLength}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors
                     ${readOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-900'}
                     ${error ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200 focus:border-blue-500'}

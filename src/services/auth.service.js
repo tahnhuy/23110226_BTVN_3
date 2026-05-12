@@ -209,6 +209,7 @@ const loginUser = async ({ email, password }) => {
     if (user.status === 'inactive') {
         const err = new Error('Tài khoản chưa kích hoạt. Kiểm tra email OTP.');
         err.statusCode = 403;
+        err.code = 'ACCOUNT_INACTIVE';
         throw err;
     }
 

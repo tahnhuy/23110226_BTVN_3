@@ -6,13 +6,14 @@ export const fetchUserProfile = createAsyncThunk(
   "profile/fetchUserProfile",
   async (_, { rejectWithValue }) => {
     try {
-      // Giả sử endpoint backend là /users/profile
-      const response = await axiosInstance.get("/users/profile");
-      // Backend thường trả về format: { status: 'success', data: { user: {...} } }
-      // Tùy theo response thực tế mà ta bóc tách dữ liệu
-      return response.data?.user || response.data || response;
+      const response = await axiosInstance.get("/users/me");
+      return response.data?.user ?? response.data;
     } catch (error) {
-      return rejectWithValue(error.message || "Lỗi khi tải thông tin");
+      const msg =
+        typeof error === "string"
+          ? error
+          : error?.message || "Lỗi khi tải thông tin";
+      return rejectWithValue(msg);
     }
   },
 );
@@ -23,9 +24,13 @@ export const updateUserProfile = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.put("/users/profile", userData);
-      return response.data?.user || response.data || response;
+      return response.data?.user ?? response.data;
     } catch (error) {
-      return rejectWithValue(error.message || "Cập nhật thất bại");
+      const msg =
+        typeof error === "string"
+          ? error
+          : error?.message || "Cập nhật thất bại";
+      return rejectWithValue(msg);
     }
   },
 );

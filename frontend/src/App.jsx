@@ -1,14 +1,27 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ProfilePage from './pages/ProfilePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ActivateAccountPage from './pages/ActivateAccountPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Redirect trang chủ về profile tạm thời để bạn test */}
         <Route path="/" element={<Navigate to="/profile" replace />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/activate" element={<ActivateAccountPage />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );
