@@ -43,11 +43,20 @@ const listProducts = async (req, res, next) => {
 
 const getProduct = async (req, res, next) => {
     try {
-        const product = await catalogService.getProductBySlug(req.params.slug);
-        return successResponse(res, 200, 'OK', { product });
+        const data = await catalogService.getProductBySlug(req.params.slug);
+        return successResponse(res, 200, 'OK', data);
     } catch (error) {
         next(error);
     }
 };
 
-module.exports = { listMajors, listCategories, listProducts, getProduct };
+const getHome = async (req, res, next) => {
+    try {
+        const data = await catalogService.getHomePageData();
+        return successResponse(res, 200, 'OK', data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { listMajors, listCategories, listProducts, getProduct, getHome };

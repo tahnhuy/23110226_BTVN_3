@@ -23,6 +23,9 @@ export interface CatalogProduct {
     compareAtPrice?: number | null;
     discountPercent?: number | null;
     stockQuantity?: number;
+    lowStockThreshold?: number;
+    soldCount?: number;
+    viewCount?: number;
     condition?: string;
     isFeatured?: boolean;
     productType?: string;
@@ -59,4 +62,28 @@ export interface ProductReview {
 export interface ProductDetail extends CatalogProduct {
     reviews?: ProductReview[];
     reviewSummary?: { average: number | null; count: number };
+}
+
+export interface ProductDetailResponse {
+    product: ProductDetail;
+    similarProducts: CatalogProduct[];
+}
+
+export interface PromoBanner {
+    id: number;
+    title: string;
+    subtitle?: string | null;
+    imageUrl?: string | null;
+    linkUrl?: string | null;
+    badgeText?: string | null;
+    placement: 'hero' | 'promo_left' | 'promo_right';
+}
+
+export interface HomePageData {
+    banners: PromoBanner[];
+    categories: CategoryWithCount[];
+    featured: CatalogProduct[];
+    newest: CatalogProduct[];
+    bestSellers: CatalogProduct[];
+    majors: Major[];
 }
