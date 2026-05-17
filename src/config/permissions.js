@@ -2,8 +2,11 @@
  * Maps each role to allowed permission keys.
  * Admin is handled in middleware as full access (see requirePermission).
  */
+const CUSTOMER_PERMISSIONS = ['profile:read', 'profile:update', 'orders:read', 'cart:manage'];
+
 const PERMISSIONS_BY_ROLE = {
-    user: ['profile:read', 'profile:update'],
+    customer: CUSTOMER_PERMISSIONS,
+    user: CUSTOMER_PERMISSIONS,
     admin: [
         'profile:read',
         'profile:update',

@@ -7,6 +7,7 @@ const errorHandler = require('./middlewares/error.middleware');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const adminRoutes = require('./routes/admin.routes');
+const catalogRoutes = require('./routes/catalog.routes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 // Xử lý Route không tồn tại
 app.all('*', (req, res, next) => {

@@ -1,0 +1,53 @@
+[
+  {
+    "slug": "merchandise",
+    "name": "Đồ lưu niệm",
+    "description": "Đồng phục, phụ kiện và văn phòng phẩm UTE",
+    "sortOrder": 1,
+    "children": [
+      { "slug": "merchandise-uniform", "name": "Áo đồng phục biến tấu", "sortOrder": 1 },
+      { "slug": "merchandise-accessories", "name": "Phụ kiện cá nhân", "sortOrder": 2 },
+      { "slug": "merchandise-stationery", "name": "Văn phòng phẩm", "sortOrder": 3 }
+    ]
+  },
+  {
+    "slug": "study-tools",
+    "name": "Dụng cụ & tài liệu học tập",
+    "description": "Thiết bị kỹ thuật, vẽ và giáo trình",
+    "sortOrder": 2,
+    "children": [
+      { "slug": "study-electronics", "name": "Linh kiện điện tử", "sortOrder": 1 },
+      { "slug": "study-drafting", "name": "Dụng cụ vẽ & mô hình", "sortOrder": 2 },
+      { "slug": "study-materials", "name": "Giáo trình & tài liệu", "sortOrder": 3 }
+    ]
+  },
+  {
+    "slug": "technology",
+    "name": "Đồ công nghệ",
+    "description": "Phụ kiện laptop và linh kiện nâng cấp",
+    "sortOrder": 3,
+    "children": [
+      { "slug": "tech-peripherals", "name": "Phụ kiện máy tính", "sortOrder": 1 },
+      { "slug": "tech-upgrades", "name": "Linh kiện nâng cấp", "sortOrder": 2 },
+      { "slug": "tech-stickers", "name": "Sticker trang trí", "sortOrder": 3 }
+    ]
+  },
+  {
+    "slug": "student-life",
+    "name": "Đời sống",
+    "description": "Tiện ích phòng trọ và decor",
+    "sortOrder": 4,
+    "children": [
+      { "slug": "life-dorm", "name": "Tiện ích phòng trọ", "sortOrder": 1 }
+    ]
+  },
+  {
+    "slug": "second-hand",
+    "name": "Đồ cũ & thanh lý",
+    "description": "Ký gửi và thanh lý đồ sinh viên",
+    "sortOrder": 5,
+    "children": [
+      { "slug": "second-hand-consignment", "name": "Ký gửi đồ cũ", "sortOrder": 1 }
+    ]
+  }
+]

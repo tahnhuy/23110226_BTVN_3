@@ -1,0 +1,9 @@
+[
+  { "code": "GENERAL", "name": "General", "sortOrder": 0 },
+  { "code": "IT", "name": "IT & Computer Science", "sortOrder": 1 },
+  { "code": "MECH", "name": "Mechanical Engineering", "sortOrder": 2 },
+  { "code": "EE", "name": "Electrical Engineering", "sortOrder": 3 },
+  { "code": "ARCH", "name": "Architecture", "sortOrder": 4 },
+  { "code": "BIOTECH", "name": "Biotechnology", "sortOrder": 5 },
+  { "code": "CIVIL", "name": "Civil Engineering", "sortOrder": 6 }
+]

@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const User = require('../models/user.model');
+const Major = require('../models/major.model');
 const redisClient = require('../config/redis');
 const { generateAccessToken, generateRefreshToken } = require('../utils/tokenGenerator');
 const { normalizeEmailForAuth } = require('../utils/normalizeEmail');
@@ -47,7 +48,7 @@ const comparePassword = (plain, hash) => bcrypt.compare(plain, hash);
 
 const generateOtp = () => String(crypto.randomInt(100000, 1000000));
 
-const registerUser = async ({ username, email, password }) => {
+const registerUser = async ({ username, email, password, fullName, studentId, majorId }) => {
     const normalizedEmail = normalizeEmailForAuth(email);
 
     const existing = await User.findOne({
@@ -66,13 +67,25 @@ const registerUser = async ({ username, email, password }) => {
         throw err;
     }
 
+    if (majorId) {
+        const major = await Major.findByPk(majorId);
+        if (!major || !major.isActive) {
+            const err = new Error('Ngành học không hợp lệ');
+            err.statusCode = 400;
+            throw err;
+        }
+    }
+
     const passwordHash = await hashPassword(password);
 
     const user = await User.create({
         username: username.trim(),
         email: normalizedEmail,
         password: passwordHash,
-        role: 'user',
+        fullName: fullName?.trim() || null,
+        studentId: studentId?.trim() || null,
+        majorId: majorId || null,
+        role: 'customer',
         status: 'inactive'
     });
 
