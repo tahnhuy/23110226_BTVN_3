@@ -1,42 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import axiosInstance from '../services/axiosConfig';
+import {
+    clearStoredSession,
+    loadStoredUser,
+    persistAuthSession
+} from '../services/authSession';
 import type { ApiEnvelope, ApiErrorPayload } from '../types/api';
-import type { AuthState, AuthUser, LoginResponseData, RegisterInfo } from '../types/auth';
-
-const ACCESS_TOKEN_KEY = 'accessToken';
-const REFRESH_TOKEN_KEY = 'refreshToken';
-const AUTH_USER_KEY = 'authUser';
-
-function loadStoredUser(): AuthUser | null {
-    if (typeof window === 'undefined') return null;
-    try {
-        const raw = localStorage.getItem(AUTH_USER_KEY);
-        return raw ? (JSON.parse(raw) as AuthUser) : null;
-    } catch {
-        return null;
-    }
-}
-
-function persistAuthSession({
-    accessToken,
-    refreshToken,
-    user
-}: {
-    accessToken: string;
-    refreshToken: string;
-    user: AuthUser;
-}) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
-}
-
-function clearStoredSession() {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_USER_KEY);
-}
+import type { AuthState, LoginResponseData, RegisterInfo } from '../types/auth';
 
 function parseApiError(payload: unknown): string {
     if (!payload) return 'Đã xảy ra lỗi';
