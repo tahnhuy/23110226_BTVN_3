@@ -1,11 +1,18 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import type { Location } from 'react-router-dom';
+import { useAppSelector } from '../../store/hooks';
+import type { AuthUser } from '../../types/auth';
 
 const PRIMARY = '#004AC6';
 const TEXT_BODY = '#434655';
 
-const NAV_LINKS = [
+interface NavLink {
+    label: string;
+    to: string;
+    matchPath?: boolean;
+}
+
+const NAV_LINKS: NavLink[] = [
     { label: 'Home', to: '/' },
     { label: 'Categories', to: '/categories', matchPath: true },
     { label: 'Study Tools', to: '/categories?category=study-tools' },
@@ -16,20 +23,17 @@ const NAV_LINKS = [
     { label: 'Support', to: '/#support' }
 ];
 
-function profileLabel(user) {
+function profileLabel(user: AuthUser | null | undefined): string {
     return user?.fullName || user?.username || user?.email || 'Account';
 }
 
-function profileInitial(user) {
+function profileInitial(user: AuthUser | null | undefined): string {
     return profileLabel(user).charAt(0).toUpperCase();
 }
 
-function isNavActive(location, link) {
+function isNavActive(location: Location, link: NavLink): boolean {
     if (link.matchPath) {
-        return (
-            location.pathname === '/categories' &&
-            !location.search.includes('category=')
-        );
+        return location.pathname === '/categories' && !location.search.includes('category=');
     }
     if (link.to.startsWith('/categories?')) {
         return `${location.pathname}${location.search}` === link.to;
@@ -45,7 +49,7 @@ function isNavActive(location, link) {
 
 export default function ShopHeader() {
     const location = useLocation();
-    const user = useSelector((state) => state.auth.user);
+    const user = useAppSelector((state) => state.auth.user);
 
     return (
         <header

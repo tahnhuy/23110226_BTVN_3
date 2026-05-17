@@ -1,18 +1,25 @@
-import React, { useRef } from 'react';
+import { Fragment, useRef } from 'react';
+import type { KeyboardEvent } from 'react';
 
-function digitsOnly(value) {
+function digitsOnly(value: string | null | undefined): string {
     return String(value ?? '').replace(/\D/g, '').slice(0, 6);
 }
 
-export default function OtpBoxes({ value, onChange, disabled }) {
-    const inputsRef = useRef([]);
+interface OtpBoxesProps {
+    value: string;
+    onChange: (value: string) => void;
+    disabled?: boolean;
+}
+
+export default function OtpBoxes({ value, onChange, disabled }: OtpBoxesProps) {
+    const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
     const digits = digitsOnly(value).padEnd(6, ' ').split('').map((c) => (c === ' ' ? '' : c));
 
-    const emit = (nextDigits) => {
+    const emit = (nextDigits: string[]) => {
         onChange(digitsOnly(nextDigits.join('')));
     };
 
-    const handleChange = (index, raw) => {
+    const handleChange = (index: number, raw: string) => {
         const d = digitsOnly(raw);
         const next = [...digits];
         if (d.length > 1) {
@@ -32,13 +39,13 @@ export default function OtpBoxes({ value, onChange, disabled }) {
         }
     };
 
-    const handleKeyDown = (index, e) => {
+    const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Backspace' && !digits[index] && index > 0) {
             inputsRef.current[index - 1]?.focus();
         }
     };
 
-    const handlePaste = (e) => {
+    const handlePaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
         const pasted = digitsOnly(e.clipboardData.getData('text'));
         if (!pasted) return;
@@ -54,7 +61,7 @@ export default function OtpBoxes({ value, onChange, disabled }) {
     return (
         <div className="flex items-center justify-center gap-2 sm:gap-3" onPaste={handlePaste}>
             {digits.map((digit, index) => (
-                <React.Fragment key={index}>
+                <Fragment key={index}>
                     {index === 3 && (
                         <span className="px-0.5 text-xl font-bold text-outline-variant" aria-hidden>
                             -
@@ -75,7 +82,7 @@ export default function OtpBoxes({ value, onChange, disabled }) {
                         className="h-14 w-11 rounded-xl border-none bg-surface-container text-center text-2xl font-bold text-on-surface focus:ring-2 focus:ring-primary sm:w-12"
                         aria-label={`Digit ${index + 1}`}
                     />
-                </React.Fragment>
+                </Fragment>
             ))}
         </div>
     );

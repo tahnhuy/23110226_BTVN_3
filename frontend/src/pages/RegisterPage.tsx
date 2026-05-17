@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
     registerUser,
     verifyRegistrationEmail,
@@ -12,8 +13,10 @@ import axiosInstance from '../services/axiosConfig';
 import AuthShell from '../components/auth/AuthShell';
 import AuthField from '../components/auth/AuthField';
 import OtpBoxes from '../components/auth/OtpBoxes';
+import type { ApiEnvelope } from '../types/api';
+import type { Major } from '../types/catalog';
 
-function digitsOnly(value) {
+function digitsOnly(value: string | null | undefined) {
     return String(value ?? '').replace(/\D/g, '').slice(0, 6);
 }
 
@@ -24,7 +27,7 @@ const loginSecondary = {
 };
 
 const RegisterPage = () => {
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const {
@@ -37,9 +40,9 @@ const RegisterPage = () => {
         registerInfo,
         verifyEmailSuccess,
         user
-    } = useSelector((state) => state.auth);
+    } = useAppSelector((state) => state.auth);
 
-    const [majors, setMajors] = useState([]);
+    const [majors, setMajors] = useState<Major[]>([]);
     const [username, setUsername] = useState('');
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -50,8 +53,8 @@ const RegisterPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [otp, setOtp] = useState('');
-    const [localError, setLocalError] = useState(null);
-    const [resendHint, setResendHint] = useState(null);
+    const [localError, setLocalError] = useState<string | null>(null);
+    const [resendHint, setResendHint] = useState<string | null>(null);
 
     const activationEmail = registerInfo?.email ?? email.trim();
 
@@ -63,10 +66,9 @@ const RegisterPage = () => {
 
     useEffect(() => {
         axiosInstance
-            .get('/catalog/majors')
+            .get<ApiEnvelope<{ majors: Major[] }>>('/catalog/majors')
             .then((res) => {
-                const list = res.data?.majors ?? [];
-                setMajors(list);
+                setMajors(res.data?.majors ?? []);
             })
             .catch(() => setMajors([]));
     }, []);
@@ -82,7 +84,7 @@ const RegisterPage = () => {
         setLocalError(null);
     };
 
-    const handleSubmitRegister = async (e) => {
+    const handleSubmitRegister = async (e: FormEvent) => {
         e.preventDefault();
         setLocalError(null);
         setResendHint(null);
@@ -97,12 +99,12 @@ const RegisterPage = () => {
                 password,
                 fullName: fullName.trim(),
                 studentId: studentId.trim(),
-                majorId: majorId || null
+                majorId: majorId ? Number(majorId) : null
             })
         );
     };
 
-    const handleSubmitOtp = async (e) => {
+    const handleSubmitOtp = async (e: FormEvent) => {
         e.preventDefault();
         setLocalError(null);
         setResendHint(null);
@@ -133,10 +135,13 @@ const RegisterPage = () => {
 
     const showOtpStep = registerSuccess && registerInfo && !verifyEmailSuccess;
 
-    const passwordToggle = (visible, setVisible) => (
+    const passwordToggle = (
+        visible: boolean,
+        setVisible: Dispatch<SetStateAction<boolean>>
+    ) => (
         <button
             type="button"
-            onClick={() => setVisible((v) => !v)}
+            onClick={() => setVisible((v: boolean) => !v)}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant transition-colors hover:text-primary"
             aria-label={visible ? 'Hide password' : 'Show password'}
         >
@@ -429,3 +434,4 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
+

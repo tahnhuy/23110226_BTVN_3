@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axiosInstance from '../services/axiosConfig';
 import { formatPrice } from '../utils/formatPrice';
+import type { ApiEnvelope } from '../types/api';
+import type { ProductDetail, ProductReview } from '../types/catalog';
 
 const DEMO_REVIEWS = [
     {
@@ -33,14 +35,14 @@ const DEMO_REVIEWS = [
     }
 ];
 
-function initials(name, username) {
+function initials(name?: string | null, username?: string | null) {
     const base = name || username || '?';
     const parts = base.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return base.charAt(0).toUpperCase();
 }
 
-function StarRating({ value, size = 24 }) {
+function StarRating({ value, size = 24 }: { value: number; size?: number }) {
     const stars = [];
     for (let i = 1; i <= 5; i += 1) {
         const filled = value >= i;
@@ -58,16 +60,18 @@ function StarRating({ value, size = 24 }) {
     return <div className="flex items-center gap-0.5">{stars}</div>;
 }
 
-function buildSpecRows(product) {
-    const attrs = product?.attributes || {};
-    const rows = [];
+function buildSpecRows(product: ProductDetail): [string, string][] {
+    const attrs = (product?.attributes ?? {}) as Record<string, unknown>;
+    const rows: [string, string][] = [];
 
-    if (attrs.microcontroller) rows.push(['Microcontroller', attrs.microcontroller]);
-    if (attrs.compatibility) rows.push(['Compatibility', attrs.compatibility]);
-    if (attrs.components) rows.push(['Components', attrs.components]);
-    if (attrs.voltage) rows.push(['Operating Voltage', attrs.voltage]);
-    if (attrs.sizes) rows.push(['Sizes', Array.isArray(attrs.sizes) ? attrs.sizes.join(', ') : attrs.sizes]);
-    if (attrs.colors) rows.push(['Colors', Array.isArray(attrs.colors) ? attrs.colors.join(', ') : attrs.colors]);
+    const str = (v: unknown) => (Array.isArray(v) ? v.join(', ') : String(v ?? ''));
+
+    if (attrs.microcontroller) rows.push(['Microcontroller', str(attrs.microcontroller)]);
+    if (attrs.compatibility) rows.push(['Compatibility', str(attrs.compatibility)]);
+    if (attrs.components) rows.push(['Components', str(attrs.components)]);
+    if (attrs.voltage) rows.push(['Operating Voltage', str(attrs.voltage)]);
+    if (attrs.sizes) rows.push(['Sizes', str(attrs.sizes)]);
+    if (attrs.colors) rows.push(['Colors', str(attrs.colors)]);
 
     if (rows.length === 0) {
         rows.push(['SKU', product.sku || '—']);
@@ -139,9 +143,9 @@ function ProductDetailFooter() {
 
 export default function ProductDetailPage() {
     const { slug } = useParams();
-    const [product, setProduct] = useState(null);
+    const [product, setProduct] = useState<ProductDetail | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState(0);
     const [activeTab, setActiveTab] = useState('specs');
 
@@ -151,15 +155,20 @@ export default function ProductDetailPage() {
             setLoading(true);
             setError(null);
             try {
-                const res = await axiosInstance.get(`/catalog/products/${slug}`);
-                const data = res?.data ?? res;
+                const res = await axiosInstance.get<ApiEnvelope<{ product: ProductDetail }>>(
+                    `/catalog/products/${slug}`
+                );
                 if (!cancelled) {
-                    setProduct(data?.product ?? null);
+                    setProduct(res.data?.product ?? null);
                     setSelectedImage(0);
                 }
             } catch (err) {
                 if (!cancelled) {
-                    setError(typeof err === 'string' ? err : err?.message || 'Product not found');
+                    const msg =
+                        typeof err === 'string'
+                            ? err
+                            : (err as { message?: string })?.message || 'Product not found';
+                    setError(msg);
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -184,8 +193,8 @@ export default function ProductDetailPage() {
 
     const reviews = useMemo(() => {
         if (!product) return [];
-        if (product.reviews?.length > 0) {
-            return product.reviews.map((r) => ({
+        if ((product.reviews?.length ?? 0) > 0) {
+            return (product.reviews ?? []).map((r: ProductReview) => ({
                 id: r.id,
                 rating: r.rating,
                 title: r.comment?.slice(0, 40) || 'Student review',
@@ -197,12 +206,13 @@ export default function ProductDetailPage() {
         return DEMO_REVIEWS;
     }, [product]);
 
-    const reviewAverage = product?.reviewSummary?.count
-        ? product.reviewSummary.average
-        : 4.8;
+    const reviewAverage =
+        product?.reviewSummary?.count && product.reviewSummary.average != null
+            ? product.reviewSummary.average
+            : 4.8;
     const reviewCount = product?.reviewSummary?.count || 124;
 
-    const inStock = product?.stockQuantity > 0;
+    const inStock = (product?.stockQuantity ?? 0) > 0;
     const parentSlug = product?.category?.parent?.slug;
     const categorySlug = product?.category?.slug;
     const categoryName = product?.category?.name;
@@ -354,13 +364,13 @@ export default function ProductDetailPage() {
                             <div className="rounded-xl bg-surface-container-low p-4">
                                 <div className="mb-1 text-xs text-on-surface-variant">COMPATIBILITY</div>
                                 <div className="font-bold">
-                                    {product.attributes?.compatibility || 'Arduino / ESP32'}
+                                    {String(product.attributes?.compatibility ?? 'Arduino / ESP32')}
                                 </div>
                             </div>
                             <div className="rounded-xl bg-surface-container-low p-4">
                                 <div className="mb-1 text-xs text-on-surface-variant">COMPONENTS</div>
                                 <div className="font-bold">
-                                    {product.attributes?.components || '140+ Pieces'}
+                                    {String(product.attributes?.components ?? '140+ Pieces')}
                                 </div>
                             </div>
                             <div className="rounded-xl bg-surface-container-low p-4">
@@ -434,9 +444,9 @@ export default function ProductDetailPage() {
                                     {product.description ||
                                         'Complete kit with all components required for introductory engineering labs.'}
                                 </p>
-                                {product.tags?.length > 0 && (
+                                {(product.tags?.length ?? 0) > 0 && (
                                     <div className="flex flex-wrap gap-2">
-                                        {product.tags.map((tag) => (
+                                        {(product.tags ?? []).map((tag) => (
                                             <span
                                                 key={tag}
                                                 className="rounded-full border border-outline-variant bg-white px-4 py-2 text-sm text-on-surface-variant"
@@ -458,8 +468,8 @@ export default function ProductDetailPage() {
                                     This product is recommended for students in the following programs:
                                 </p>
                                 <div className="flex flex-wrap gap-3">
-                                    {product.majors?.length > 0 ? (
-                                        product.majors.map((m) => (
+                                    {(product.majors?.length ?? 0) > 0 ? (
+                                        (product.majors ?? []).map((m) => (
                                             <span
                                                 key={m.id}
                                                 className="rounded-full border border-outline-variant bg-white px-4 py-2 text-sm text-on-surface-variant"

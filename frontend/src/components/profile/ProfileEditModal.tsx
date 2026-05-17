@@ -1,12 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useEffect, useState } from 'react';
+import type { FormEvent, ChangeEvent } from 'react';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { updateUserProfile, clearStatus } from '../../store/profileSlice';
+import type { ProfileUpdatePayload } from '../../types/profile';
 
-export default function ProfileEditModal({ open, onClose }) {
-    const dispatch = useDispatch();
-    const { user, isUpdating, error, updateSuccess } = useSelector((state) => state.profile);
+interface ProfileEditModalProps {
+    open: boolean;
+    onClose: () => void;
+}
 
-    const [formData, setFormData] = useState({
+export default function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
+    const dispatch = useAppDispatch();
+    const { user, isUpdating, error, updateSuccess } = useAppSelector((state) => state.profile);
+
+    const [formData, setFormData] = useState<ProfileUpdatePayload>({
         fullName: '',
         phone: '',
         address: ''
@@ -34,13 +41,13 @@ export default function ProfileEditModal({ open, onClose }) {
 
     if (!open) return null;
 
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
         if (updateSuccess || error) dispatch(clearStatus());
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         dispatch(updateUserProfile(formData));
     };
@@ -155,3 +162,4 @@ export default function ProfileEditModal({ open, onClose }) {
         </div>
     );
 }
+

@@ -1,11 +1,27 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../services/axiosConfig';
 import { formatPrice } from '../../utils/formatPrice';
+import type { ApiEnvelope } from '../../types/api';
+import type { CatalogProduct } from '../../types/catalog';
 
 const DEBOUNCE_MS = 280;
 const MIN_CHARS = 2;
 const SUGGEST_LIMIT = 8;
+
+interface ProductSearchBoxProps {
+    value: string;
+    onChange: (value: string) => void;
+    onSearch: (term: string) => void;
+    category?: string;
+    majorId?: string | number;
+    placeholder?: string;
+}
+
+interface ProductsListData {
+    products: CatalogProduct[];
+}
 
 export default function ProductSearchBox({
     value,
@@ -14,12 +30,12 @@ export default function ProductSearchBox({
     category,
     majorId,
     placeholder = 'Search products, SKU, keywords…'
-}) {
+}: ProductSearchBoxProps) {
     const navigate = useNavigate();
     const listId = useId();
-    const wrapperRef = useRef(null);
+    const wrapperRef = useRef<HTMLFormElement>(null);
     const [open, setOpen] = useState(false);
-    const [suggestions, setSuggestions] = useState([]);
+    const [suggestions, setSuggestions] = useState<CatalogProduct[]>([]);
     const [suggestLoading, setSuggestLoading] = useState(false);
     const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -37,18 +53,20 @@ export default function ProductSearchBox({
         setSuggestLoading(true);
         const timer = setTimeout(async () => {
             try {
-                const res = await axiosInstance.get('/catalog/products', {
-                    params: {
-                        q: term,
-                        category: category && category !== 'all' ? category : undefined,
-                        majorId: majorId || undefined,
-                        limit: SUGGEST_LIMIT,
-                        page: 1,
-                        sort: 'popular'
+                const res = await axiosInstance.get<ApiEnvelope<ProductsListData>>(
+                    '/catalog/products',
+                    {
+                        params: {
+                            q: term,
+                            category: category && category !== 'all' ? category : undefined,
+                            majorId: majorId || undefined,
+                            limit: SUGGEST_LIMIT,
+                            page: 1,
+                            sort: 'popular'
+                        }
                     }
-                });
-                const data = res?.data ?? res;
-                setSuggestions(data?.products ?? []);
+                );
+                setSuggestions(res.data?.products ?? []);
                 setActiveIndex(-1);
             } catch {
                 setSuggestions([]);
@@ -61,8 +79,8 @@ export default function ProductSearchBox({
     }, [value, category, majorId]);
 
     useEffect(() => {
-        function handleClickOutside(e) {
-            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        function handleClickOutside(e: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
                 setOpen(false);
             }
         }
@@ -70,14 +88,14 @@ export default function ProductSearchBox({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const goToProduct = (product) => {
+    const goToProduct = (product: CatalogProduct) => {
         onChange(product.name);
         setOpen(false);
         setActiveIndex(-1);
         navigate(`/products/${product.slug}`);
     };
 
-    const applySearch = (term) => {
+    const applySearch = (term: string) => {
         const t = term.trim();
         onChange(t);
         onSearch(t);
@@ -85,7 +103,7 @@ export default function ProductSearchBox({
         setActiveIndex(-1);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         if (activeIndex >= 0 && suggestions[activeIndex]) {
             goToProduct(suggestions[activeIndex]);
@@ -94,7 +112,7 @@ export default function ProductSearchBox({
         applySearch(value);
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (!open || suggestions.length === 0) return;
 
         if (e.key === 'ArrowDown') {

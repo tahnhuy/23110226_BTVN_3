@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axiosInstance from '../services/axiosConfig';
 import ProductSearchBox from '../components/catalog/ProductSearchBox';
 import { formatPrice } from '../utils/formatPrice';
+import type { ApiEnvelope, PaginationMeta } from '../types/api';
+import type { CatalogProduct, CategoryWithCount, Major } from '../types/catalog';
 
 const SORT_OPTIONS = [
     { value: 'newest', label: 'Newest Arrival' },
@@ -13,7 +15,7 @@ const SORT_OPTIONS = [
 
 const HERO_IMAGE = '/PremiumLaptop.png';
 
-const CATEGORY_DISPLAY = {
+const CATEGORY_DISPLAY: Record<string, string> = {
     all: 'All Products',
     merchandise: 'Merchandise',
     'study-tools': 'Study Tools',
@@ -22,14 +24,14 @@ const CATEGORY_DISPLAY = {
     'second-hand': 'Second-hand'
 };
 
-function categoryLabel(product) {
+function categoryLabel(product: CatalogProduct) {
     const c = product.category;
     if (!c) return 'General';
     if (c.parentName) return `${c.parentName} & ${c.name}`;
     return c.name;
 }
 
-function ProductCard({ product }) {
+function ProductCard({ product }: { product: CatalogProduct }) {
     const hasDiscount =
         product.compareAtPrice != null && product.compareAtPrice > product.price;
 
@@ -135,12 +137,17 @@ export default function CategoriesPage() {
     const sort = searchParams.get('sort') || 'newest';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
-    const [categories, setCategories] = useState([]);
-    const [majors, setMajors] = useState([]);
-    const [products, setProducts] = useState([]);
-    const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 0 });
+    const [categories, setCategories] = useState<CategoryWithCount[]>([]);
+    const [majors, setMajors] = useState<Major[]>([]);
+    const [products, setProducts] = useState<CatalogProduct[]>([]);
+    const [pagination, setPagination] = useState<PaginationMeta>({
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 0
+    });
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState(q);
 
     useEffect(() => {
@@ -148,7 +155,7 @@ export default function CategoriesPage() {
     }, [q]);
 
     const updateParams = useCallback(
-        (updates) => {
+        (updates: Record<string, string | number | null | undefined>) => {
             const next = new URLSearchParams(searchParams);
             Object.entries(updates).forEach(([key, value]) => {
                 if (value === '' || value === null || value === undefined || value === 'all') {
@@ -172,9 +179,13 @@ export default function CategoriesPage() {
             setError(null);
             try {
                 const [catRes, majorRes, prodRes] = await Promise.all([
-                    axiosInstance.get('/catalog/categories'),
-                    axiosInstance.get('/catalog/majors'),
-                    axiosInstance.get('/catalog/products', {
+                    axiosInstance.get<ApiEnvelope<{ categories: CategoryWithCount[] }>>(
+                        '/catalog/categories'
+                    ),
+                    axiosInstance.get<ApiEnvelope<{ majors: Major[] }>>('/catalog/majors'),
+                    axiosInstance.get<
+                        ApiEnvelope<{ products: CatalogProduct[]; pagination: PaginationMeta }>
+                    >('/catalog/products', {
                         params: {
                             q: q || undefined,
                             category: category === 'all' ? undefined : category,
@@ -188,19 +199,19 @@ export default function CategoriesPage() {
 
                 if (cancelled) return;
 
-                const catData = catRes?.data ?? catRes;
-                const majorData = majorRes?.data ?? majorRes;
-                const prodData = prodRes?.data ?? prodRes;
-
-                setCategories(catData?.categories ?? []);
-                setMajors(majorData?.majors ?? []);
-                setProducts(prodData?.products ?? []);
+                setCategories(catRes.data?.categories ?? []);
+                setMajors(majorRes.data?.majors ?? []);
+                setProducts(prodRes.data?.products ?? []);
                 setPagination(
-                    prodData?.pagination ?? { page: 1, limit: 12, total: 0, totalPages: 0 }
+                    prodRes.data?.pagination ?? { page: 1, limit: 12, total: 0, totalPages: 0 }
                 );
             } catch (err) {
                 if (!cancelled) {
-                    setError(typeof err === 'string' ? err : err?.message || 'Failed to load catalog');
+                    const msg =
+                        typeof err === 'string'
+                            ? err
+                            : (err as { message?: string })?.message || 'Failed to load catalog';
+                    setError(msg);
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -443,7 +454,7 @@ export default function CategoriesPage() {
                                     const prev = arr[idx - 1];
                                     const showEllipsis = prev != null && p - prev > 1;
                                     return (
-                                        <React.Fragment key={p}>
+                                        <Fragment key={p}>
                                             {showEllipsis && (
                                                 <span className="flex h-12 w-12 items-center justify-center">
                                                     …
@@ -460,7 +471,7 @@ export default function CategoriesPage() {
                                             >
                                                 {p}
                                             </button>
-                                        </React.Fragment>
+                                        </Fragment>
                                     );
                                 })}
                             <button

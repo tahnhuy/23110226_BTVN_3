@@ -1,4 +1,21 @@
-import React from 'react';
+import type { ChangeEventHandler, ReactNode } from 'react';
+
+interface AuthFieldProps {
+    id: string;
+    label: string;
+    icon?: string;
+    type?: string;
+    value: string;
+    onChange: ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
+    error?: string;
+    placeholder?: string;
+    autoComplete?: string;
+    inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+    maxLength?: number;
+    rightSlot?: ReactNode;
+    as?: 'input' | 'select';
+    children?: ReactNode;
+}
 
 export default function AuthField({
     id,
@@ -15,7 +32,7 @@ export default function AuthField({
     rightSlot,
     as = 'input',
     children
-}) {
+}: AuthFieldProps) {
     const inputClass = `h-14 w-full rounded-xl border-none bg-surface-container text-base text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 ${
         icon ? 'pl-12' : 'pl-4'
     } ${rightSlot ? 'pr-12' : 'pr-4'} ${error ? 'ring-2 ring-error/30' : ''}`;

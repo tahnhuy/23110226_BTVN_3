@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { loginUser, clearAuthError } from '../store/authSlice';
 import AuthShell from '../components/auth/AuthShell';
 
 const REMEMBER_KEY = 'uteshop_remember_email';
 
 const LoginPage = () => {
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const location = useLocation();
     const from = location.state?.from?.pathname || '/';
     const justActivated = location.state?.justActivated === true;
 
-    const { loginLoading, error, fieldErrors, user } = useSelector((state) => state.auth);
+    const { loginLoading, error, fieldErrors, user } = useAppSelector((state) => state.auth);
 
     const [email, setEmail] = useState(() => localStorage.getItem(REMEMBER_KEY) || '');
     const [password, setPassword] = useState('');
@@ -26,7 +27,7 @@ const LoginPage = () => {
         }
     }, [user, navigate, from]);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         const trimmedEmail = email.trim();
         const result = await dispatch(loginUser({ email: trimmedEmail, password }));
@@ -42,8 +43,10 @@ const LoginPage = () => {
         if (loginUser.rejected.match(result)) {
             const p = result.payload;
             const isInactive =
-                p?.code === 'ACCOUNT_INACTIVE' ||
-                (typeof p?.message === 'string' && p.message.includes('chưa kích hoạt'));
+                typeof p === 'object' &&
+                p !== null &&
+                (p.code === 'ACCOUNT_INACTIVE' ||
+                    (typeof p.message === 'string' && p.message.includes('chưa kích hoạt')));
             if (isInactive) {
                 dispatch(clearAuthError());
                 navigate('/activate', {
@@ -236,3 +239,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

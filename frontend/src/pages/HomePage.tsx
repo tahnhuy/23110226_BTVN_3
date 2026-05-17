@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FiBook,
@@ -15,7 +15,6 @@ import {
 const PRIMARY = '#004AC6';
 const TEXT = '#191B23';
 const TEXT_BODY = '#434655';
-const TEXT_MUTED = '#6B7280';
 const SURFACE = '#F3F3FE';
 const PAGE_BG = '#FAF8FF';
 
@@ -152,7 +151,16 @@ function CategorySection() {
   );
 }
 
-function ProductCard({ product }) {
+interface FeaturedProduct {
+  id: string;
+  image: string;
+  alt: string;
+  tag: string;
+  title: string;
+  price: string;
+}
+
+function ProductCard({ product }: { product: FeaturedProduct }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
       <div className="h-80 overflow-hidden" style={{ backgroundColor: '#EDE9FA' }}>

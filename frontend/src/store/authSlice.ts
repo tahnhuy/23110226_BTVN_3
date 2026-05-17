@@ -1,21 +1,32 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 import axiosInstance from '../services/axiosConfig';
+import type { ApiEnvelope, ApiErrorPayload } from '../types/api';
+import type { AuthState, AuthUser, LoginResponseData, RegisterInfo } from '../types/auth';
 
 const ACCESS_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const AUTH_USER_KEY = 'authUser';
 
-function loadStoredUser() {
+function loadStoredUser(): AuthUser | null {
     if (typeof window === 'undefined') return null;
     try {
         const raw = localStorage.getItem(AUTH_USER_KEY);
-        return raw ? JSON.parse(raw) : null;
+        return raw ? (JSON.parse(raw) as AuthUser) : null;
     } catch {
         return null;
     }
 }
 
-function persistAuthSession({ accessToken, refreshToken, user }) {
+function persistAuthSession({
+    accessToken,
+    refreshToken,
+    user
+}: {
+    accessToken: string;
+    refreshToken: string;
+    user: AuthUser;
+}) {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
@@ -27,80 +38,96 @@ function clearStoredSession() {
     localStorage.removeItem(AUTH_USER_KEY);
 }
 
-function parseApiError(payload) {
+function parseApiError(payload: unknown): string {
     if (!payload) return 'Đã xảy ra lỗi';
     if (typeof payload === 'string') return payload;
-    if (payload.message) return payload.message;
+    const p = payload as ApiErrorPayload;
+    if (p.message) return p.message;
     return 'Đã xảy ra lỗi';
 }
 
-function mapValidationErrors(errors) {
+function mapValidationErrors(errors: ApiErrorPayload['errors']): Record<string, string> {
     if (!Array.isArray(errors)) return {};
-    return errors.reduce((acc, e) => {
+    return errors.reduce<Record<string, string>>((acc, e) => {
         const key = e.path ?? e.param;
         if (key && acc[key] == null) acc[key] = e.msg;
         return acc;
     }, {});
 }
 
-export const loginUser = createAsyncThunk(
-    'auth/loginUser',
-    async ({ email, password }, { rejectWithValue }) => {
-        try {
-            const res = await axiosInstance.post('/auth/login', { email, password });
-            return res.data;
-        } catch (err) {
-            return rejectWithValue(err);
-        }
+export const loginUser = createAsyncThunk<
+    LoginResponseData,
+    { email: string; password: string },
+    { rejectValue: ApiErrorPayload | string }
+>('auth/loginUser', async ({ email, password }, { rejectWithValue }) => {
+    try {
+        const res = await axiosInstance.post<ApiEnvelope<LoginResponseData>>('/auth/login', {
+            email,
+            password
+        });
+        return res.data;
+    } catch (err) {
+        return rejectWithValue(err as ApiErrorPayload | string);
     }
-);
+});
 
-export const registerUser = createAsyncThunk(
-    'auth/registerUser',
-    async ({ username, email, password, fullName, studentId, majorId }, { rejectWithValue }) => {
-        try {
-            const res = await axiosInstance.post('/auth/register', {
-                username,
-                email,
-                password,
-                fullName: fullName || undefined,
-                studentId: studentId || undefined,
-                majorId: majorId ? Number(majorId) : undefined
-            });
-            return res.data;
-        } catch (err) {
-            return rejectWithValue(err);
-        }
+export const registerUser = createAsyncThunk<
+    ApiEnvelope<RegisterInfo>,
+    {
+        username: string;
+        email: string;
+        password: string;
+        fullName?: string;
+        studentId?: string;
+        majorId?: number | null;
+    },
+    { rejectValue: ApiErrorPayload | string }
+>('auth/registerUser', async (body, { rejectWithValue }) => {
+    try {
+        const res = await axiosInstance.post<ApiEnvelope<RegisterInfo>>('/auth/register', {
+            username: body.username,
+            email: body.email,
+            password: body.password,
+            fullName: body.fullName || undefined,
+            studentId: body.studentId || undefined,
+            majorId: body.majorId ? Number(body.majorId) : undefined
+        });
+        return res as ApiEnvelope<RegisterInfo>;
+    } catch (err) {
+        return rejectWithValue(err as ApiErrorPayload | string);
     }
-);
+});
 
-/** Kích hoạt tài khoản sau đăng ký — POST /auth/verify-email */
-export const verifyRegistrationEmail = createAsyncThunk(
-    'auth/verifyRegistrationEmail',
-    async ({ email, otp }, { rejectWithValue }) => {
-        try {
-            const res = await axiosInstance.post('/auth/verify-email', { email, otp });
-            return res?.data ?? res;
-        } catch (err) {
-            return rejectWithValue(err);
-        }
+export const verifyRegistrationEmail = createAsyncThunk<
+    ApiEnvelope<Record<string, never>>,
+    { email: string; otp: string },
+    { rejectValue: ApiErrorPayload | string }
+>('auth/verifyRegistrationEmail', async ({ email, otp }, { rejectWithValue }) => {
+    try {
+        const res = await axiosInstance.post<ApiEnvelope<Record<string, never>>>(
+            '/auth/verify-email',
+            { email, otp }
+        );
+        return res;
+    } catch (err) {
+        return rejectWithValue(err as ApiErrorPayload | string);
     }
-);
+});
 
-/** Gửi lại OTP đăng ký — POST /auth/resend-otp */
-export const resendRegistrationOtp = createAsyncThunk(
-    'auth/resendRegistrationOtp',
-    async ({ email }, { rejectWithValue }) => {
-        try {
-            await axiosInstance.post('/auth/resend-otp', { email });
-            return { email };
-        } catch (err) {
-            return rejectWithValue(err);
-        }
+export const resendRegistrationOtp = createAsyncThunk<
+    { email: string },
+    { email: string },
+    { rejectValue: ApiErrorPayload | string }
+>('auth/resendRegistrationOtp', async ({ email }, { rejectWithValue }) => {
+    try {
+        await axiosInstance.post('/auth/resend-otp', { email });
+        return { email };
+    } catch (err) {
+        return rejectWithValue(err as ApiErrorPayload | string);
     }
-);
+});
 
-const initialState = {
+const initialState: AuthState = {
     user: loadStoredUser(),
     loginLoading: false,
     registerLoading: false,
@@ -143,7 +170,7 @@ const authSlice = createSlice({
                 state.error = null;
                 state.fieldErrors = {};
             })
-            .addCase(loginUser.fulfilled, (state, action) => {
+            .addCase(loginUser.fulfilled, (state, action: PayloadAction<LoginResponseData>) => {
                 state.loginLoading = false;
                 const { accessToken, refreshToken, user } = action.payload;
                 state.user = user;
@@ -153,15 +180,18 @@ const authSlice = createSlice({
                 state.loginLoading = false;
                 const p = action.payload;
                 const inactive =
-                    p?.code === 'ACCOUNT_INACTIVE' ||
-                    (typeof p?.message === 'string' && p.message.includes('chưa kích hoạt'));
+                    typeof p === 'object' &&
+                    p !== null &&
+                    (p.code === 'ACCOUNT_INACTIVE' ||
+                        (typeof p.message === 'string' && p.message.includes('chưa kích hoạt')));
                 if (inactive) {
                     state.error = null;
                     state.fieldErrors = {};
                     return;
                 }
                 state.error = parseApiError(p);
-                state.fieldErrors = mapValidationErrors(p?.errors);
+                state.fieldErrors =
+                    typeof p === 'object' && p !== null ? mapValidationErrors(p.errors) : {};
             })
             .addCase(registerUser.pending, (state) => {
                 state.registerLoading = true;
@@ -179,7 +209,8 @@ const authSlice = createSlice({
                 state.registerLoading = false;
                 const p = action.payload;
                 state.error = parseApiError(p);
-                state.fieldErrors = mapValidationErrors(p?.errors);
+                state.fieldErrors =
+                    typeof p === 'object' && p !== null ? mapValidationErrors(p.errors) : {};
             })
             .addCase(verifyRegistrationEmail.pending, (state) => {
                 state.verifyEmailLoading = true;
@@ -197,7 +228,8 @@ const authSlice = createSlice({
                 state.verifyEmailLoading = false;
                 const p = action.payload;
                 state.error = parseApiError(p);
-                state.fieldErrors = mapValidationErrors(p?.errors);
+                state.fieldErrors =
+                    typeof p === 'object' && p !== null ? mapValidationErrors(p.errors) : {};
             })
             .addCase(resendRegistrationOtp.pending, (state) => {
                 state.resendOtpLoading = true;
@@ -209,8 +241,7 @@ const authSlice = createSlice({
             })
             .addCase(resendRegistrationOtp.rejected, (state, action) => {
                 state.resendOtpLoading = false;
-                const p = action.payload;
-                state.error = parseApiError(p);
+                state.error = parseApiError(action.payload);
             });
     }
 });

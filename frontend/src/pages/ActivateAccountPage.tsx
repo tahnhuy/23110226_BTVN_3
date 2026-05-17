@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
     verifyRegistrationEmail,
     resendRegistrationOtp,
@@ -10,7 +11,7 @@ import {
 import InputField from '../components/common/InputField';
 import Button from '../components/common/Button';
 
-function digitsOnly(value) {
+function digitsOnly(value: string | null | undefined) {
     return String(value ?? '').replace(/\D/g, '').slice(0, 6);
 }
 
@@ -22,19 +23,19 @@ const activationAutoResendKeys = new Set();
  * Vào trang từ /login (state.email); tự gửi OTP mới một lần khi có fromLoginAt.
  */
 const ActivateAccountPage = () => {
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const location = useLocation();
     const email = typeof location.state?.email === 'string' ? location.state.email.trim() : '';
     const fromLoginAt = location.state?.fromLoginAt;
 
-    const { verifyEmailLoading, resendOtpLoading, error, fieldErrors, user } = useSelector(
+    const { verifyEmailLoading, resendOtpLoading, error, fieldErrors, user } = useAppSelector(
         (state) => state.auth
     );
 
     const [otp, setOtp] = useState('');
-    const [localError, setLocalError] = useState(null);
-    const [resendHint, setResendHint] = useState(null);
+    const [localError, setLocalError] = useState<string | null>(null);
+    const [resendHint, setResendHint] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -60,7 +61,7 @@ const ActivateAccountPage = () => {
             });
     }, [email, fromLoginAt, dispatch]);
 
-    const handleSubmitOtp = async (e) => {
+    const handleSubmitOtp = async (e: FormEvent) => {
         e.preventDefault();
         setLocalError(null);
         setResendHint(null);
@@ -87,7 +88,7 @@ const ActivateAccountPage = () => {
         }
     };
 
-    const handleOtpChange = (e) => {
+    const handleOtpChange = (e: ChangeEvent<HTMLInputElement>) => {
         setOtp(digitsOnly(e.target.value));
         if (error) dispatch(clearAuthError());
         setLocalError(null);
@@ -179,3 +180,4 @@ const ActivateAccountPage = () => {
 };
 
 export default ActivateAccountPage;
+

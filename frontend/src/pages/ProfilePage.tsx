@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchUserProfile } from '../store/profileSlice';
 import { logout } from '../store/authSlice';
 import ProfileEditModal from '../components/profile/ProfileEditModal';
+import type { AuthUser } from '../types/auth';
+import type { ProfileUser } from '../types/profile';
 
 const DEFAULT_AVATAR =
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256&h=256&fit=crop&crop=faces';
@@ -45,11 +47,11 @@ const MOCK_ORDERS = [
     }
 ];
 
-function displayName(user, authUser) {
+function displayName(user: ProfileUser | null, authUser: AuthUser | null) {
     return user?.fullName || user?.username || authUser?.username || 'Student';
 }
 
-function profileSubtitle(user) {
+function profileSubtitle(user: ProfileUser | null) {
     const major = user?.major?.name;
     const sid = user?.studentId;
     const parts = [];
@@ -58,7 +60,7 @@ function profileSubtitle(user) {
     return parts.length ? parts.join(' • ') : user?.email || '';
 }
 
-function OrderProgress({ filled }) {
+function OrderProgress({ filled }: { filled: number }) {
     return (
         <div className="mt-6 flex items-center gap-2">
             {[0, 1, 2, 3].map((i) => (
@@ -127,10 +129,10 @@ function ProfileFooter() {
 }
 
 const ProfilePage = () => {
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { user, isLoading, error } = useSelector((state) => state.profile);
-    const authUser = useSelector((state) => state.auth.user);
+    const { user, isLoading, error } = useAppSelector((state) => state.profile);
+    const authUser = useAppSelector((state) => state.auth.user);
 
     const [activeSection, setActiveSection] = useState('overview');
     const [editOpen, setEditOpen] = useState(false);
@@ -144,7 +146,7 @@ const ProfilePage = () => {
         navigate('/login', { replace: true });
     };
 
-    const scrollTo = (id) => {
+    const scrollTo = (id: string) => {
         setActiveSection(id);
         document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
@@ -477,3 +479,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+

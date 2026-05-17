@@ -1,12 +1,13 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '../../store/hooks';
 
-/**
- * Chỉ cho phép truy cập khi đã có phiên (token trong localStorage hoặc user trong Redux).
- */
-function ProtectedRoute({ children }) {
-    const user = useSelector((state) => state.auth.user);
+interface ProtectedRouteProps {
+    children: ReactNode;
+}
+
+function ProtectedRoute({ children }: ProtectedRouteProps) {
+    const user = useAppSelector((state) => state.auth.user);
     const location = useLocation();
     const token =
         typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;

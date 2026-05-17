@@ -1,4 +1,18 @@
-import React from 'react';
+import type { ChangeEventHandler } from 'react';
+
+interface InputFieldProps {
+    label?: string;
+    type?: string;
+    name?: string;
+    value?: string;
+    onChange?: ChangeEventHandler<HTMLInputElement>;
+    placeholder?: string;
+    error?: string;
+    readOnly?: boolean;
+    inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+    autoComplete?: string;
+    maxLength?: number;
+}
 
 const InputField = ({
     label,
@@ -12,7 +26,7 @@ const InputField = ({
     inputMode,
     autoComplete,
     maxLength
-}) => {
+}: InputFieldProps) => {
     return (
         <div className="mb-4">
             {label && (
