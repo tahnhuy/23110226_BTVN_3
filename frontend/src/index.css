@@ -62,3 +62,13 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.product-gallery-main .swiper-button-next,
+.product-gallery-main .swiper-button-prev {
+  color: var(--color-primary);
+}
+
+.product-gallery-main .swiper-pagination-bullet-active {
+  background: var(--color-primary);
+}
+

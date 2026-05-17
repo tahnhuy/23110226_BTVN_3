@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Product, Category, ProductImage, Major, ProductReview, User } = require('../models');
+const { Product, Category, ProductImage, Major, ProductReview, User, Banner } = require('../models');
 
 async function resolveCategoryIds(categorySlug) {
     if (!categorySlug || categorySlug === 'all') return null;
@@ -39,6 +39,8 @@ function mapProductRow(product) {
         compareAtPrice: json.compareAtPrice != null ? Number(json.compareAtPrice) : null,
         isFeatured: json.isFeatured,
         condition: json.condition,
+        soldCount: json.soldCount ?? 0,
+        viewCount: json.viewCount ?? 0,
         imageUrl: primaryImage?.url || null,
         imageAlt: primaryImage?.altText || json.name,
         category: leafCategory
@@ -96,13 +98,18 @@ const listProducts = async ({
     majorId,
     sort = 'newest',
     page = 1,
-    limit = 12
+    limit = 12,
+    featured
 }) => {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
     const offset = (pageNum - 1) * limitNum;
 
     const where = { status: 'active' };
+
+    if (featured === true || featured === 'true' || featured === 1 || featured === '1') {
+        where.isFeatured = true;
+    }
 
     const categoryIds = await resolveCategoryIds(categorySlug);
     if (categoryIds !== null) {
@@ -239,8 +246,11 @@ function mapProductDetail(product) {
         compareAtPrice,
         discountPercent,
         stockQuantity: json.stockQuantity,
+        lowStockThreshold: json.lowStockThreshold ?? 5,
         condition: json.condition,
         isFeatured: json.isFeatured,
+        soldCount: json.soldCount ?? 0,
+        viewCount: json.viewCount ?? 0,
         productType: json.productType,
         tags: json.tags || [],
         attributes: json.attributes || {},
@@ -280,6 +290,61 @@ function mapProductDetail(product) {
         }
     };
 }
+
+const productListInclude = [
+    {
+        model: ProductImage,
+        as: 'images',
+        attributes: ['id', 'url', 'altText', 'isPrimary', 'sortOrder'],
+        separate: true,
+        order: [
+            ['isPrimary', 'DESC'],
+            ['sortOrder', 'ASC']
+        ]
+    },
+    {
+        model: Category,
+        as: 'category',
+        attributes: ['id', 'name', 'slug', 'parentId'],
+        required: false,
+        include: [
+            {
+                model: Category,
+                as: 'parent',
+                attributes: ['id', 'name', 'slug'],
+                required: false
+            }
+        ]
+    },
+    {
+        model: Major,
+        as: 'majors',
+        attributes: ['id', 'code', 'name'],
+        through: { attributes: [] },
+        required: false
+    }
+];
+
+const getSimilarProducts = async (productId, categoryId, limit = 4) => {
+    if (!categoryId) return [];
+
+    const rows = await Product.findAll({
+        where: {
+            status: 'active',
+            id: { [Op.ne]: productId },
+            categoryId
+        },
+        include: productListInclude,
+        order: [
+            ['soldCount', 'DESC'],
+            ['viewCount', 'DESC'],
+            ['createdAt', 'DESC']
+        ],
+        limit: Math.min(12, Math.max(1, parseInt(limit, 10) || 4))
+    });
+
+    return rows.map(mapProductRow);
+};
 
 const getProductBySlug = async (slug) => {
     const product = await Product.findOne({
@@ -339,11 +404,84 @@ const getProductBySlug = async (slug) => {
 
     await product.increment('viewCount');
 
-    return mapProductDetail(product);
+    const mapped = mapProductDetail(product);
+    const similarProducts = await getSimilarProducts(
+        mapped.id,
+        product.categoryId,
+        4
+    );
+
+    return { product: mapped, similarProducts };
+};
+
+const listActiveBanners = async () => {
+    const now = new Date();
+    const rows = await Banner.findAll({
+        where: {
+            isActive: true,
+            [Op.and]: [
+                {
+                    [Op.or]: [{ startsAt: null }, { startsAt: { [Op.lte]: now } }]
+                },
+                {
+                    [Op.or]: [{ endsAt: null }, { endsAt: { [Op.gte]: now } }]
+                }
+            ]
+        },
+        order: [
+            ['sortOrder', 'ASC'],
+            ['id', 'ASC']
+        ]
+    });
+
+    return rows.map((b) => {
+        const json = b.toJSON ? b.toJSON() : b;
+        return {
+            id: json.id,
+            title: json.title,
+            subtitle: json.subtitle,
+            imageUrl: json.imageUrl,
+            linkUrl: json.linkUrl,
+            badgeText: json.badgeText,
+            placement: json.placement
+        };
+    });
+};
+
+const getHomePageData = async () => {
+    const [banners, categoriesData, featured, newest, bestSellers, majors] = await Promise.all([
+        listActiveBanners(),
+        listCategoriesWithCounts(),
+        listProducts({ featured: true, limit: 3, sort: 'newest' }),
+        listProducts({ limit: 4, sort: 'newest' }),
+        listProducts({ limit: 4, sort: 'popular' }),
+        Major.findAll({
+            where: { isActive: true },
+            order: [
+                ['sortOrder', 'ASC'],
+                ['name', 'ASC']
+            ],
+            attributes: ['id', 'code', 'name']
+        })
+    ]);
+
+    const shopCategories = categoriesData.categories.filter((c) => c.slug !== 'all');
+
+    return {
+        banners,
+        categories: shopCategories,
+        featured: featured.products,
+        newest: newest.products,
+        bestSellers: bestSellers.products,
+        majors: majors.map((m) => m.toJSON())
+    };
 };
 
 module.exports = {
     listCategoriesWithCounts,
     listProducts,
-    getProductBySlug
+    getProductBySlug,
+    getSimilarProducts,
+    listActiveBanners,
+    getHomePageData
 };
