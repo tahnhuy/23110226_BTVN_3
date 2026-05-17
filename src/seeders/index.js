@@ -1,7 +1,11 @@
 require('dotenv').config();
 
-const sequelize = require('../config/db');
-const User = require('../models/user.model');
+const { sequelize, syncDatabase } = require('../models');
+const { seedMajors } = require('./seedMajors');
+const { seedCategories } = require('./seedCategories');
+const { seedProducts } = require('./seedProducts');
+const { seedBanners } = require('./seedBanners');
+const { seedPromotions } = require('./seedPromotions');
 const { seedUsers } = require('./seedUsers');
 
 const run = async () => {
@@ -9,8 +13,26 @@ const run = async () => {
         await sequelize.authenticate();
         console.log('Database connection OK.');
 
-        await User.sync();
-        console.log('Ensured `users` table exists.');
+        const { ensureUserColumns } = require('../utils/ensureSchema');
+
+        console.log('Syncing all tables...');
+        await syncDatabase({ alter: false });
+        await ensureUserColumns(sequelize);
+
+        console.log('Seeding majors...');
+        const majorCodeToId = await seedMajors();
+
+        console.log('Seeding categories...');
+        const categorySlugToId = await seedCategories();
+
+        console.log('Seeding products...');
+        await seedProducts(categorySlugToId, majorCodeToId);
+
+        console.log('Seeding banners...');
+        await seedBanners();
+
+        console.log('Seeding promotions...');
+        await seedPromotions(categorySlugToId);
 
         console.log('Seeding users...');
         await seedUsers();

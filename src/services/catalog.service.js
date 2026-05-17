@@ -1,0 +1,349 @@
+const { Op } = require('sequelize');
+const { Product, Category, ProductImage, Major, ProductReview, User } = require('../models');
+
+async function resolveCategoryIds(categorySlug) {
+    if (!categorySlug || categorySlug === 'all') return null;
+
+    const category = await Category.findOne({
+        where: { slug: categorySlug, isActive: true }
+    });
+    if (!category) return [];
+
+    if (category.parentId) {
+        return [category.id];
+    }
+
+    const children = await Category.findAll({
+        where: { parentId: category.id, isActive: true },
+        attributes: ['id']
+    });
+    if (children.length > 0) {
+        return children.map((c) => c.id);
+    }
+    return [category.id];
+}
+
+function mapProductRow(product) {
+    const json = product.toJSON ? product.toJSON() : product;
+    const primaryImage =
+        json.images?.find((img) => img.isPrimary) || json.images?.[0] || null;
+    const parentCategory = json.category?.parent || null;
+    const leafCategory = json.category;
+
+    return {
+        id: json.id,
+        name: json.name,
+        slug: json.slug,
+        shortDescription: json.shortDescription,
+        price: Number(json.price),
+        compareAtPrice: json.compareAtPrice != null ? Number(json.compareAtPrice) : null,
+        isFeatured: json.isFeatured,
+        condition: json.condition,
+        imageUrl: primaryImage?.url || null,
+        imageAlt: primaryImage?.altText || json.name,
+        category: leafCategory
+            ? {
+                  id: leafCategory.id,
+                  name: leafCategory.name,
+                  slug: leafCategory.slug,
+                  parentName: parentCategory?.name || null
+              }
+            : null,
+        majors: (json.majors || []).map((m) => ({ id: m.id, code: m.code, name: m.name }))
+    };
+}
+
+const listCategoriesWithCounts = async () => {
+    const parents = await Category.findAll({
+        where: { parentId: null, isActive: true },
+        order: [['sortOrder', 'ASC'], ['name', 'ASC']]
+    });
+
+    const activeProductWhere = { status: 'active' };
+
+    const total = await Product.count({ where: activeProductWhere });
+
+    const categories = [
+        {
+            slug: 'all',
+            name: 'All Products',
+            productCount: total
+        }
+    ];
+
+    for (const parent of parents) {
+        const childRows = await Category.findAll({
+            where: { parentId: parent.id, isActive: true },
+            attributes: ['id']
+        });
+        const ids = childRows.length > 0 ? childRows.map((c) => c.id) : [parent.id];
+        const productCount = await Product.count({
+            where: { ...activeProductWhere, categoryId: { [Op.in]: ids } }
+        });
+        categories.push({
+            slug: parent.slug,
+            name: parent.name,
+            productCount
+        });
+    }
+
+    return { categories, total };
+};
+
+const listProducts = async ({
+    q,
+    categorySlug,
+    majorId,
+    sort = 'newest',
+    page = 1,
+    limit = 12
+}) => {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
+    const offset = (pageNum - 1) * limitNum;
+
+    const where = { status: 'active' };
+
+    const categoryIds = await resolveCategoryIds(categorySlug);
+    if (categoryIds !== null) {
+        if (categoryIds.length === 0) {
+            return {
+                products: [],
+                pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 }
+            };
+        }
+        where.categoryId = { [Op.in]: categoryIds };
+    }
+
+    const trimmedQ = typeof q === 'string' ? q.trim() : '';
+    if (trimmedQ) {
+        const like = `%${trimmedQ}%`;
+        where[Op.or] = [
+            { name: { [Op.like]: like } },
+            { shortDescription: { [Op.like]: like } },
+            { description: { [Op.like]: like } },
+            { sku: { [Op.like]: like } }
+        ];
+    }
+
+    let order = [['createdAt', 'DESC']];
+    switch (sort) {
+        case 'price_asc':
+            order = [['price', 'ASC']];
+            break;
+        case 'price_desc':
+            order = [['price', 'DESC']];
+            break;
+        case 'popular':
+            order = [
+                ['soldCount', 'DESC'],
+                ['viewCount', 'DESC']
+            ];
+            break;
+        default:
+            order = [['createdAt', 'DESC']];
+    }
+
+    const include = [
+        {
+            model: Category,
+            as: 'category',
+            attributes: ['id', 'name', 'slug', 'parentId'],
+            include: [
+                {
+                    model: Category,
+                    as: 'parent',
+                    attributes: ['id', 'name', 'slug'],
+                    required: false
+                }
+            ]
+        },
+        {
+            model: ProductImage,
+            as: 'images',
+            attributes: ['id', 'url', 'altText', 'isPrimary', 'sortOrder'],
+            separate: true,
+            order: [
+                ['isPrimary', 'DESC'],
+                ['sortOrder', 'ASC']
+            ]
+        },
+        {
+            model: Major,
+            as: 'majors',
+            attributes: ['id', 'code', 'name'],
+            through: { attributes: [] },
+            required: false
+        }
+    ];
+
+    if (majorId) {
+        include[2].where = { id: majorId };
+        include[2].required = true;
+    }
+
+    const { rows, count } = await Product.findAndCountAll({
+        where,
+        include,
+        order,
+        limit: limitNum,
+        offset,
+        distinct: true
+    });
+
+    return {
+        products: rows.map(mapProductRow),
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total: count,
+            totalPages: Math.ceil(count / limitNum) || 0
+        }
+    };
+};
+
+function mapProductDetail(product) {
+    const json = product.toJSON ? product.toJSON() : product;
+    const images = (json.images || []).map((img) => ({
+        id: img.id,
+        url: img.url,
+        altText: img.altText || json.name,
+        isPrimary: img.isPrimary
+    }));
+    const primaryImage = images.find((img) => img.isPrimary) || images[0] || null;
+    const parentCategory = json.category?.parent || null;
+    const leafCategory = json.category;
+    const price = Number(json.price);
+    const compareAtPrice =
+        json.compareAtPrice != null ? Number(json.compareAtPrice) : null;
+    const discountPercent =
+        compareAtPrice && compareAtPrice > price
+            ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100)
+            : null;
+
+    const approvedReviews = (json.reviews || []).filter((r) => r.status === 'approved');
+    const reviewCount = approvedReviews.length;
+    const averageRating =
+        reviewCount > 0
+            ? approvedReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+            : null;
+
+    return {
+        id: json.id,
+        name: json.name,
+        slug: json.slug,
+        sku: json.sku,
+        shortDescription: json.shortDescription,
+        description: json.description,
+        price,
+        compareAtPrice,
+        discountPercent,
+        stockQuantity: json.stockQuantity,
+        condition: json.condition,
+        isFeatured: json.isFeatured,
+        productType: json.productType,
+        tags: json.tags || [],
+        attributes: json.attributes || {},
+        imageUrl: primaryImage?.url || null,
+        images,
+        category: leafCategory
+            ? {
+                  id: leafCategory.id,
+                  name: leafCategory.name,
+                  slug: leafCategory.slug,
+                  parent: parentCategory
+                      ? {
+                            id: parentCategory.id,
+                            name: parentCategory.name,
+                            slug: parentCategory.slug
+                        }
+                      : null
+              }
+            : null,
+        majors: (json.majors || []).map((m) => ({ id: m.id, code: m.code, name: m.name })),
+        reviews: approvedReviews.map((r) => ({
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment,
+            createdAt: r.createdAt,
+            user: r.user
+                ? {
+                      id: r.user.id,
+                      fullName: r.user.fullName,
+                      username: r.user.username
+                  }
+                : null
+        })),
+        reviewSummary: {
+            average: averageRating,
+            count: reviewCount
+        }
+    };
+}
+
+const getProductBySlug = async (slug) => {
+    const product = await Product.findOne({
+        where: { slug, status: 'active' },
+        include: [
+            {
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'name', 'slug', 'parentId'],
+                include: [
+                    {
+                        model: Category,
+                        as: 'parent',
+                        attributes: ['id', 'name', 'slug'],
+                        required: false
+                    }
+                ]
+            },
+            {
+                model: ProductImage,
+                as: 'images',
+                attributes: ['id', 'url', 'altText', 'isPrimary', 'sortOrder'],
+                separate: true,
+                order: [
+                    ['isPrimary', 'DESC'],
+                    ['sortOrder', 'ASC']
+                ]
+            },
+            {
+                model: Major,
+                as: 'majors',
+                attributes: ['id', 'code', 'name'],
+                through: { attributes: [] }
+            },
+            {
+                model: ProductReview,
+                as: 'reviews',
+                where: { status: 'approved' },
+                required: false,
+                include: [
+                    {
+                        model: User,
+                        as: 'user',
+                        attributes: ['id', 'fullName', 'username', 'majorId'],
+                        required: false
+                    }
+                ]
+            }
+        ]
+    });
+
+    if (!product) {
+        const err = new Error('Product not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    await product.increment('viewCount');
+
+    return mapProductDetail(product);
+};
+
+module.exports = {
+    listCategoriesWithCounts,
+    listProducts,
+    getProductBySlug
+};

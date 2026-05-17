@@ -1,19 +1,139 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUserProfile } from '../store/profileSlice';
 import { logout } from '../store/authSlice';
-import ProfileForm from '../components/profile/ProfileForm';
-import ResetPasswordForm from '../components/profile/ResetPasswordForm';
-import Button from '../components/common/Button';
-import { FaUserCircle } from 'react-icons/fa';
+import ProfileEditModal from '../components/profile/ProfileEditModal';
+
+const DEFAULT_AVATAR =
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256&h=256&fit=crop&crop=faces';
+
+const SIDEBAR_ITEMS = [
+    { id: 'overview', label: 'Overview', icon: 'dashboard', filled: true },
+    { id: 'orders', label: 'Order History', icon: 'shopping_bag' },
+    { id: 'reviews', label: 'My Reviews', icon: 'reviews' },
+    { id: 'wishlist', label: 'Wishlist', icon: 'favorite' },
+    { id: 'settings', label: 'Account Settings', icon: 'settings' }
+];
+
+const MOCK_ORDERS = [
+    {
+        id: 'UTE-82741',
+        status: 'In Transit',
+        statusClass: 'bg-tertiary-fixed text-on-tertiary-fixed-variant',
+        title: 'Precision Workstation Laptop 16"',
+        detail: 'Arriving by Thursday, Oct 24',
+        price: '$1,899.00',
+        priceClass: 'text-primary',
+        image: '/ArduinoKitStarterPro.png',
+        action: 'Track Order',
+        actionClass: 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high',
+        progress: 2
+    },
+    {
+        id: 'UTE-81920',
+        status: 'Delivered Sep 12',
+        statusClass: 'bg-surface-container-highest text-on-surface-variant',
+        title: 'Calculus for Engineers: 5th Edition',
+        detail: 'Package left with residential advisor',
+        price: '$112.50',
+        priceClass: 'text-on-surface',
+        image: '/OHoodieUteLimited.png',
+        action: 'Reorder',
+        actionClass: 'border border-outline-variant text-on-surface-variant hover:bg-surface-container-high',
+        progress: 0
+    }
+];
+
+function displayName(user, authUser) {
+    return user?.fullName || user?.username || authUser?.username || 'Student';
+}
+
+function profileSubtitle(user) {
+    const major = user?.major?.name;
+    const sid = user?.studentId;
+    const parts = [];
+    if (major) parts.push(major);
+    if (sid) parts.push(`ID: ${sid}`);
+    return parts.length ? parts.join(' • ') : user?.email || '';
+}
+
+function OrderProgress({ filled }) {
+    return (
+        <div className="mt-6 flex items-center gap-2">
+            {[0, 1, 2, 3].map((i) => (
+                <div
+                    key={i}
+                    className={`h-1.5 flex-1 rounded-full ${
+                        i < filled ? 'bg-primary' : 'bg-surface-container'
+                    }`}
+                />
+            ))}
+        </div>
+    );
+}
+
+function ProfileFooter() {
+    return (
+        <footer className="w-full bg-surface-container-low py-20">
+            <div className="mx-auto grid max-w-[1280px] grid-cols-2 gap-4 px-6 md:grid-cols-4 lg:grid-cols-5 lg:px-8">
+                <div className="col-span-2 lg:col-span-1">
+                    <div className="mb-4 text-2xl font-bold text-on-surface">UTEShop</div>
+                    <p className="text-xs text-on-surface-variant opacity-80">
+                        Engineering-Grade Quality since 2018.
+                    </p>
+                </div>
+                <div className="flex flex-col gap-4">
+                    <h5 className="text-sm font-semibold text-primary">Shop</h5>
+                    <a href="/#featured" className="text-xs text-on-surface-variant hover:text-primary">
+                        Technology
+                    </a>
+                    <a href="/#featured" className="text-xs text-on-surface-variant hover:text-primary">
+                        Textbooks
+                    </a>
+                    <a href="/#featured" className="text-xs text-on-surface-variant hover:text-primary">
+                        Lab Gear
+                    </a>
+                </div>
+                <div className="flex flex-col gap-4">
+                    <h5 className="text-sm font-semibold text-primary">Support</h5>
+                    <a href="#support" className="text-xs text-on-surface-variant hover:text-primary">
+                        Student Support
+                    </a>
+                    <a href="#support" className="text-xs text-on-surface-variant hover:text-primary">
+                        Shipping
+                    </a>
+                    <a href="#support" className="text-xs text-on-surface-variant hover:text-primary">
+                        Contact
+                    </a>
+                </div>
+                <div className="flex flex-col gap-4">
+                    <h5 className="text-sm font-semibold text-primary">Legal</h5>
+                    <a href="#support" className="text-xs text-on-surface-variant hover:text-primary">
+                        Privacy Policy
+                    </a>
+                    <a href="#support" className="text-xs text-on-surface-variant hover:text-primary">
+                        Terms of Service
+                    </a>
+                </div>
+                <div className="col-span-2 mt-10 border-t border-outline-variant pt-10 md:col-span-4 lg:col-span-1 lg:mt-0 lg:border-none lg:pt-0">
+                    <p className="text-xs text-on-surface-variant">
+                        © 2024 UTEShop. Engineering-Grade Quality.
+                    </p>
+                </div>
+            </div>
+        </footer>
+    );
+}
 
 const ProfilePage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { user, isLoading, error } = useSelector((state) => state.profile);
     const authUser = useSelector((state) => state.auth.user);
-    const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'password'
+
+    const [activeSection, setActiveSection] = useState('overview');
+    const [editOpen, setEditOpen] = useState(false);
 
     useEffect(() => {
         dispatch(fetchUserProfile());
@@ -24,87 +144,334 @@ const ProfilePage = () => {
         navigate('/login', { replace: true });
     };
 
-    return (
-        <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 text-center sm:text-left">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                            Trang Cá Nhân
-                        </h1>
-                        <p className="mt-2 text-sm text-gray-600">
-                            Quản lý thông tin và bảo mật tài khoản của bạn.
-                        </p>
-                    </div>
-                    <Button type="button" variant="outline" onClick={handleLogout} className="shrink-0">
-                        Đăng xuất
-                    </Button>
-                </div>
+    const scrollTo = (id) => {
+        setActiveSection(id);
+        document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
+    const name = displayName(user, authUser);
+    const avatarSrc = user?.avatarUrl || DEFAULT_AVATAR;
+    const isVerified = Boolean(user?.emailVerifiedAt) || user?.status === 'active';
+
+    return (
+        <div className="overflow-x-hidden bg-surface text-on-surface">
+            <main className="mx-auto max-w-[1280px] px-6 pb-20 pt-10 lg:px-8">
                 {isLoading ? (
-                    <div className="flex justify-center items-center py-20">
-                        <svg className="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                    <div className="flex justify-center py-32">
+                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+                    </div>
+                ) : error && !user ? (
+                    <div className="rounded-[24px] border border-error/20 bg-red-50 p-8 text-center text-error">
+                        <p>{error}</p>
+                        <button
+                            type="button"
+                            onClick={() => dispatch(fetchUserProfile())}
+                            className="mt-4 rounded-full bg-primary px-6 py-2 text-sm font-semibold text-on-primary"
+                        >
+                            Retry
+                        </button>
                     </div>
                 ) : (
                     <>
-                        {error && !user ? (
-                            <div className="bg-red-100 text-red-700 p-4 rounded-lg text-center shadow-sm">
-                                <p>Đã xảy ra lỗi: {error}</p>
-                                <p className="text-sm mt-2">(Mẹo: API Backend hiện chưa có dữ liệu thật hoặc bạn chưa đăng nhập)</p>
-                            </div>
-                        ) : (
-                            <div>
-                                {/* Khối hiển thị Avatar dạng tĩnh để minh họa */}
-                                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col items-center justify-center relative max-w-2xl mx-auto">
-                                    <FaUserCircle className="text-gray-300 w-24 h-24 mb-4" />
-                                    <h3 className="text-xl font-bold text-gray-900">
-                                        {user?.fullName || user?.username || authUser?.username || 'Người dùng'}
-                                    </h3>
-                                    <span className="text-sm font-medium px-3 py-1 bg-blue-100 text-blue-800 rounded-full mt-2">
-                                        {user?.role || authUser?.role || 'Thành viên'}
-                                    </span>
+                        {/* Profile hero */}
+                        <section className="mb-12">
+                            <div className="soft-shadow flex flex-col items-start justify-between gap-6 rounded-[24px] bg-surface-container-lowest p-8 md:flex-row md:items-center">
+                                <div className="flex items-center gap-6">
+                                    <div className="relative shrink-0">
+                                        <img
+                                            src={avatarSrc}
+                                            alt=""
+                                            className="h-24 w-24 rounded-[24px] object-cover md:h-32 md:w-32"
+                                        />
+                                        {isVerified && (
+                                            <div className="absolute -bottom-2 -right-2 rounded-full border-4 border-surface-container-lowest bg-primary p-1.5 text-white">
+                                                <span className="material-symbols-outlined material-symbols-filled text-[16px]">
+                                                    verified
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h1 className="text-3xl font-semibold text-on-surface">{name}</h1>
+                                        <p className="mt-1 text-base text-on-surface-variant">
+                                            {profileSubtitle(user)}
+                                        </p>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {user?.major?.name && (
+                                                <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-semibold text-on-surface-variant">
+                                                    {user.major.name}
+                                                </span>
+                                            )}
+                                            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                                {user?.role === 'admin' ? 'Admin' : 'Prime Member'}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-
-                                {/* Tabs Navigation */}
-                                <div className="max-w-2xl mx-auto mt-8 border-b border-gray-200">
-                                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                                        <button
-                                            onClick={() => setActiveTab('profile')}
-                                            className={`${
-                                                activeTab === 'profile'
-                                                    ? 'border-blue-500 text-blue-600'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
-                                        >
-                                            Thông tin cá nhân
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab('password')}
-                                            className={`${
-                                                activeTab === 'password'
-                                                    ? 'border-blue-500 text-blue-600'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
-                                        >
-                                            Đổi mật khẩu
-                                        </button>
-                                    </nav>
+                                <div className="flex w-full flex-col gap-2 md:w-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditOpen(true)}
+                                        className="flex h-14 items-center justify-center gap-2 rounded-[24px] bg-primary px-8 text-sm font-medium text-on-primary transition active:scale-95 hover:shadow-lg"
+                                    >
+                                        Edit Profile
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="flex h-14 items-center justify-center gap-2 rounded-[24px] bg-surface-container-low px-8 text-sm font-medium text-on-surface transition active:scale-95 hover:bg-surface-container-high"
+                                    >
+                                        Student ID Card
+                                    </button>
                                 </div>
-
-                                {/* Form cập nhật */}
-                                {activeTab === 'profile' ? (
-                                    <ProfileForm />
-                                ) : (
-                                    <ResetPasswordForm email={user?.email || authUser?.email} />
-                                )}
                             </div>
-                        )}
+                        </section>
+
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-6">
+                            {/* Sidebar */}
+                            <aside className="hidden lg:col-span-3 lg:block">
+                                <nav className="sticky top-28 flex flex-col gap-2">
+                                    {SIDEBAR_ITEMS.map((item) => {
+                                        const active = activeSection === item.id;
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => scrollTo(item.id)}
+                                                className={`flex items-center gap-3 rounded-xl p-4 text-left transition-all ${
+                                                    active
+                                                        ? 'bg-primary font-bold text-on-primary shadow-sm'
+                                                        : 'text-on-surface-variant hover:bg-surface-container-high'
+                                                }`}
+                                            >
+                                                <span
+                                                    className={`material-symbols-outlined ${
+                                                        item.filled && active ? 'material-symbols-filled' : ''
+                                                    }`}
+                                                >
+                                                    {item.icon}
+                                                </span>
+                                                <span className="text-sm font-medium">{item.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                    <hr className="my-4 border-outline-variant" />
+                                    <button
+                                        type="button"
+                                        onClick={handleLogout}
+                                        className="flex items-center gap-3 rounded-xl p-4 text-left text-error transition-all hover:bg-error/10"
+                                    >
+                                        <span className="material-symbols-outlined">logout</span>
+                                        <span className="text-sm font-medium">Sign Out</span>
+                                    </button>
+                                </nav>
+                            </aside>
+
+                            {/* Main content */}
+                            <div className="flex flex-col gap-20 lg:col-span-9">
+                                {/* Overview / mobile nav */}
+                                <section id="section-overview">
+                                    <div className="mb-6 flex gap-2 overflow-x-auto lg:hidden">
+                                        {SIDEBAR_ITEMS.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => scrollTo(item.id)}
+                                                className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold ${
+                                                    activeSection === item.id
+                                                        ? 'bg-primary text-on-primary'
+                                                        : 'bg-surface-container-high text-on-surface-variant'
+                                                }`}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </section>
+
+                                {/* Orders */}
+                                <section id="section-orders">
+                                    <div className="mb-8 flex items-center justify-between">
+                                        <h2 className="text-2xl font-semibold text-on-surface">Order History</h2>
+                                        <button
+                                            type="button"
+                                            className="text-sm font-medium text-primary hover:underline"
+                                        >
+                                            View All Orders
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        {MOCK_ORDERS.map((order) => (
+                                            <div
+                                                key={order.id}
+                                                className="soft-shadow rounded-[24px] border border-transparent bg-surface-container-lowest p-6 transition-all hover:border-primary/20"
+                                            >
+                                                <div className="flex flex-col justify-between gap-4 md:flex-row">
+                                                    <div className="flex gap-4">
+                                                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container">
+                                                            <img
+                                                                src={order.image}
+                                                                alt=""
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div className="mb-1 flex items-center gap-2">
+                                                                <span
+                                                                    className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${order.statusClass}`}
+                                                                >
+                                                                    {order.status}
+                                                                </span>
+                                                                <span className="text-xs text-on-surface-variant">
+                                                                    #{order.id}
+                                                                </span>
+                                                            </div>
+                                                            <h3 className="text-sm font-medium text-on-surface">
+                                                                {order.title}
+                                                            </h3>
+                                                            <p className="text-sm text-on-surface-variant">
+                                                                {order.detail}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-end justify-between md:flex-col md:items-end">
+                                                        <span
+                                                            className={`text-2xl font-semibold ${order.priceClass}`}
+                                                        >
+                                                            {order.price}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            className={`mt-2 rounded-full px-6 py-2 text-xs font-semibold transition-colors ${order.actionClass}`}
+                                                        >
+                                                            {order.action}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {order.progress > 0 && (
+                                                    <OrderProgress filled={order.progress} />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+
+                                {/* Wishlist placeholder */}
+                                <section id="section-wishlist">
+                                    <h2 className="mb-4 text-2xl font-semibold text-on-surface">Wishlist</h2>
+                                    <p className="rounded-[24px] bg-surface-container-low p-8 text-center text-on-surface-variant">
+                                        Your saved items will appear here.
+                                    </p>
+                                </section>
+
+                                {/* Reviews */}
+                                <section id="section-reviews">
+                                    <h2 className="mb-8 text-2xl font-semibold text-on-surface">My Reviews</h2>
+                                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                        <div className="flex flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-primary/20 bg-primary/5 p-8 text-center">
+                                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                                <span className="material-symbols-outlined text-[32px]">
+                                                    rate_review
+                                                </span>
+                                            </div>
+                                            <h3 className="mb-2 text-2xl font-semibold text-on-surface">
+                                                Share your thoughts
+                                            </h3>
+                                            <p className="mb-6 text-sm text-on-surface-variant">
+                                                You haven&apos;t reviewed your last purchase. Help your fellow
+                                                engineers!
+                                            </p>
+                                            <button
+                                                type="button"
+                                                className="rounded-full bg-primary px-8 py-3 text-sm font-medium text-on-primary transition active:scale-95"
+                                            >
+                                                Write Review
+                                            </button>
+                                        </div>
+                                        <div className="soft-shadow rounded-[24px] bg-surface-container-lowest p-8">
+                                            <div className="mb-4 flex items-center gap-1">
+                                                {[1, 2, 3, 4, 5].map((n) => (
+                                                    <span
+                                                        key={n}
+                                                        className="material-symbols-outlined material-symbols-filled text-primary"
+                                                    >
+                                                        star
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <h3 className="mb-2 text-sm font-medium text-on-surface">
+                                                Graphing Calculator TI-84 Plus
+                                            </h3>
+                                            <p className="mb-4 text-base italic text-on-surface-variant">
+                                                &quot;Essential for my thermodynamics class. High build quality and
+                                                the battery life is impressive for a student budget.&quot;
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-sm text-on-surface-variant">
+                                                    thumb_up
+                                                </span>
+                                                <span className="text-xs text-on-surface-variant">
+                                                    12 people found this helpful
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Settings */}
+                                <section id="section-settings">
+                                    <h2 className="mb-8 text-2xl font-semibold text-on-surface">
+                                        Account Settings
+                                    </h2>
+                                    <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                                        {[
+                                            {
+                                                icon: 'lock',
+                                                title: 'Security',
+                                                desc: 'Passwords, 2FA, Devices'
+                                            },
+                                            {
+                                                icon: 'credit_card',
+                                                title: 'Payments',
+                                                desc: 'Student loans, Cards, Billing'
+                                            },
+                                            {
+                                                icon: 'notifications',
+                                                title: 'Notifications',
+                                                desc: 'Order alerts, Price drops'
+                                            }
+                                        ].map((card) => (
+                                            <button
+                                                key={card.title}
+                                                type="button"
+                                                className="group cursor-pointer rounded-2xl bg-surface-container-low p-6 text-left transition-colors hover:bg-surface-container-high"
+                                            >
+                                                <span className="material-symbols-outlined mb-3 text-primary transition-transform group-hover:scale-110">
+                                                    {card.icon}
+                                                </span>
+                                                <h4 className="text-sm font-medium text-on-surface">
+                                                    {card.title}
+                                                </h4>
+                                                <p className="mt-1 text-xs text-on-surface-variant">{card.desc}</p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleLogout}
+                                        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-error/20 py-4 text-error transition hover:bg-error/10 lg:hidden"
+                                    >
+                                        <span className="material-symbols-outlined">logout</span>
+                                        Sign Out
+                                    </button>
+                                </section>
+                            </div>
+                        </div>
                     </>
                 )}
-            </div>
+            </main>
+
+            <ProfileFooter />
+            <ProfileEditModal open={editOpen} onClose={() => setEditOpen(false)} />
         </div>
     );
 };

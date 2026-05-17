@@ -20,7 +20,21 @@ const registerValidation = [
         .isLength({ min: 8 })
         .withMessage('Mật khẩu ít nhất 8 ký tự')
         .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
-        .withMessage('Mật khẩu phải có ít nhất một chữ cái và một chữ số')
+        .withMessage('Mật khẩu phải có ít nhất một chữ cái và một chữ số'),
+    body('fullName')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ max: 150 })
+        .withMessage('Họ tên tối đa 150 ký tự'),
+    body('studentId')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ max: 20 })
+        .withMessage('MSSV tối đa 20 ký tự'),
+    body('majorId')
+        .optional({ values: 'falsy' })
+        .isInt({ min: 1 })
+        .withMessage('Ngành không hợp lệ')
 ];
 
 const loginValidation = [

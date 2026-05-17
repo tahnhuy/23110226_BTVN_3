@@ -38,7 +38,7 @@ const ActivateAccountPage = () => {
 
     useEffect(() => {
         if (user) {
-            navigate('/profile', { replace: true });
+            navigate('/', { replace: true });
         }
     }, [user, navigate]);
 
@@ -99,9 +99,9 @@ const ActivateAccountPage = () => {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 px-4 py-12">
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center bg-surface px-4 py-12">
             <div className="w-full max-w-md">
-                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                <div className="soft-shadow rounded-[32px] border border-outline-variant/30 bg-surface-container-lowest p-8">
                     <div className="text-center mb-6">
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                             Kích hoạt tài khoản

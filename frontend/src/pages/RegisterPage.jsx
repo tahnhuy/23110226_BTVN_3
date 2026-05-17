@@ -8,12 +8,20 @@ import {
     clearAuthError,
     clearRegisterSuccess
 } from '../store/authSlice';
-import InputField from '../components/common/InputField';
-import Button from '../components/common/Button';
+import axiosInstance from '../services/axiosConfig';
+import AuthShell from '../components/auth/AuthShell';
+import AuthField from '../components/auth/AuthField';
+import OtpBoxes from '../components/auth/OtpBoxes';
 
 function digitsOnly(value) {
     return String(value ?? '').replace(/\D/g, '').slice(0, 6);
 }
+
+const loginSecondary = {
+    to: '/login',
+    title: 'Already have an account?',
+    subtitle: 'Sign in to access your academic hardware portal.'
+};
 
 const RegisterPage = () => {
     const dispatch = useDispatch();
@@ -31,21 +39,37 @@ const RegisterPage = () => {
         user
     } = useSelector((state) => state.auth);
 
+    const [majors, setMajors] = useState([]);
     const [username, setUsername] = useState('');
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
+    const [studentId, setStudentId] = useState('');
+    const [majorId, setMajorId] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [otp, setOtp] = useState('');
     const [localError, setLocalError] = useState(null);
     const [resendHint, setResendHint] = useState(null);
 
-    const activationEmail = registerInfo?.email ?? '';
+    const activationEmail = registerInfo?.email ?? email.trim();
 
     useEffect(() => {
         if (user) {
-            navigate('/profile', { replace: true });
+            navigate('/', { replace: true });
         }
     }, [user, navigate]);
+
+    useEffect(() => {
+        axiosInstance
+            .get('/catalog/majors')
+            .then((res) => {
+                const list = res.data?.majors ?? [];
+                setMajors(list);
+            })
+            .catch(() => setMajors([]));
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -53,19 +77,27 @@ const RegisterPage = () => {
         };
     }, [dispatch]);
 
+    const clearErrors = () => {
+        if (error) dispatch(clearAuthError());
+        setLocalError(null);
+    };
+
     const handleSubmitRegister = async (e) => {
         e.preventDefault();
         setLocalError(null);
         setResendHint(null);
         if (password !== confirmPassword) {
-            setLocalError('Mật khẩu xác nhận không khớp.');
+            setLocalError('Passwords do not match.');
             return;
         }
         await dispatch(
             registerUser({
                 username: username.trim(),
                 email: email.trim(),
-                password
+                password,
+                fullName: fullName.trim(),
+                studentId: studentId.trim(),
+                majorId: majorId || null
             })
         );
     };
@@ -76,7 +108,7 @@ const RegisterPage = () => {
         setResendHint(null);
         const code = digitsOnly(otp);
         if (code.length !== 6) {
-            setLocalError('Vui lòng nhập đủ 6 chữ số OTP.');
+            setLocalError('Please enter all 6 digits.');
             return;
         }
         await dispatch(
@@ -93,219 +125,306 @@ const RegisterPage = () => {
         if (!activationEmail) return;
         try {
             await dispatch(resendRegistrationOtp({ email: activationEmail })).unwrap();
-            setResendHint('Đã gửi lại mã OTP. Kiểm tra email (hoặc console nếu bật OTP_DEV_CONSOLE).');
+            setResendHint('A new code was sent. Check your email (or server console in dev).');
         } catch {
-            /* lỗi đã vào Redux error */
+            /* Redux error */
         }
-    };
-
-    const clearAndType = (setter) => (e) => {
-        setter(e.target.value);
-        if (error) dispatch(clearAuthError());
-        setLocalError(null);
-    };
-
-    const handleOtpChange = (e) => {
-        setOtp(digitsOnly(e.target.value));
-        if (error) dispatch(clearAuthError());
-        setLocalError(null);
-        setResendHint(null);
     };
 
     const showOtpStep = registerSuccess && registerInfo && !verifyEmailSuccess;
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 px-4 py-12">
-            <div className="w-full max-w-md">
-                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
-                    {verifyEmailSuccess ? (
-                        <>
-                            <div className="text-center mb-6">
-                                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                                    <svg
-                                        className="h-8 w-8"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        aria-hidden
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M5 13l4 4L19 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                                    Kích hoạt thành công
-                                </h1>
-                                <p className="mt-2 text-sm text-slate-600">
-                                    Tài khoản đã được xác thực. Bạn có thể đăng nhập ngay.
-                                </p>
-                            </div>
-                            <Button
-                                type="button"
-                                variant="primary"
-                                className="w-full"
-                                onClick={() => navigate('/login', { replace: true })}
-                            >
-                                Đến trang đăng nhập
-                            </Button>
-                        </>
-                    ) : showOtpStep ? (
-                        <>
-                            <div className="text-center mb-6">
-                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                                    Xác thực email
-                                </h1>
-                                <p className="mt-2 text-sm text-slate-600">
-                                    Nhập mã OTP 6 chữ số đã gửi đến{' '}
-                                    <strong className="text-slate-800">{activationEmail}</strong>
-                                </p>
-                            </div>
+    const passwordToggle = (visible, setVisible) => (
+        <button
+            type="button"
+            onClick={() => setVisible((v) => !v)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant transition-colors hover:text-primary"
+            aria-label={visible ? 'Hide password' : 'Show password'}
+        >
+            <span className="material-symbols-outlined">{visible ? 'visibility_off' : 'visibility'}</span>
+        </button>
+    );
 
-                            {(error || localError) && (
-                                <div
-                                    className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-100"
-                                    role="alert"
-                                >
-                                    {localError || error}
-                                </div>
-                            )}
+    let content;
 
-                            {resendHint && (
-                                <div
-                                    className="mb-4 p-3 rounded-lg bg-blue-50 text-blue-800 text-sm border border-blue-100"
-                                    role="status"
-                                >
-                                    {resendHint}
-                                </div>
-                            )}
+    if (verifyEmailSuccess) {
+        content = (
+            <div className="space-y-6 p-8 md:p-10">
+                <div className="text-center">
+                    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <span className="material-symbols-outlined text-[48px]">verified</span>
+                    </div>
+                    <h2 className="text-2xl font-semibold text-on-surface">Account verified</h2>
+                    <p className="mt-2 text-base text-on-surface-variant">
+                        Your email is confirmed. You can sign in now.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() =>
+                        navigate('/login', { replace: true, state: { justActivated: true } })
+                    }
+                    className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-on-primary transition-all hover:shadow-lg active:scale-95"
+                >
+                    <span>Continue to Login</span>
+                    <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                </button>
+            </div>
+        );
+    } else if (showOtpStep) {
+        content = (
+            <div className="space-y-6 p-8 md:p-10">
+                <div className="text-center">
+                    <h2 className="text-2xl font-semibold text-on-surface">Check your inbox</h2>
+                    <p className="mt-2 text-base text-on-surface-variant">
+                        We sent a 6-digit code to{' '}
+                        <span className="font-semibold text-on-surface">{activationEmail}</span>
+                    </p>
+                </div>
 
-                            <form onSubmit={handleSubmitOtp} className="space-y-1">
-                                <InputField
-                                    label="Mã OTP"
-                                    name="otp"
-                                    inputMode="numeric"
-                                    autoComplete="one-time-code"
-                                    maxLength={6}
-                                    value={otp}
-                                    onChange={handleOtpChange}
-                                    placeholder="000000"
-                                    error={fieldErrors.otp}
-                                />
+                {(error || localError) && (
+                    <div
+                        className="rounded-xl border border-error/20 bg-red-50 px-4 py-3 text-sm text-error"
+                        role="alert"
+                    >
+                        {localError || error}
+                    </div>
+                )}
 
-                                <div className="flex flex-col gap-3 pt-4">
-                                    <Button
-                                        type="submit"
-                                        variant="primary"
-                                        className="w-full"
-                                        isLoading={verifyEmailLoading}
-                                    >
-                                        Xác nhận kích hoạt
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={handleResendOtp}
-                                        isLoading={resendOtpLoading}
-                                        disabled={verifyEmailLoading}
-                                    >
-                                        Gửi lại mã OTP
-                                    </Button>
-                                </div>
-                            </form>
+                {resendHint && (
+                    <div
+                        className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-on-surface"
+                        role="status"
+                    >
+                        {resendHint}
+                    </div>
+                )}
 
-                            <p className="mt-6 text-center text-sm text-slate-600">
-                                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                                    Quay lại đăng nhập
-                                </Link>
-                            </p>
-                        </>
-                    ) : (
-                        <>
-                            <div className="text-center mb-8">
-                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                                    Tạo tài khoản UTEShop
-                                </h1>
-                                <p className="mt-2 text-sm text-slate-600">
-                                    Đăng ký để nhận mã OTP kích hoạt qua email.
-                                </p>
-                            </div>
-
-                            {(error || localError) && (
-                                <div
-                                    className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-100"
-                                    role="alert"
-                                >
-                                    {localError || error}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleSubmitRegister} className="space-y-1">
-                                <InputField
-                                    label="Tên đăng nhập"
-                                    name="username"
-                                    value={username}
-                                    onChange={clearAndType(setUsername)}
-                                    placeholder="3–50 ký tự"
-                                    error={fieldErrors.username}
-                                />
-                                <InputField
-                                    label="Email"
-                                    name="email"
-                                    type="email"
-                                    value={email}
-                                    onChange={clearAndType(setEmail)}
-                                    placeholder="you@example.com"
-                                    error={fieldErrors.email}
-                                />
-                                <InputField
-                                    label="Mật khẩu"
-                                    name="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={clearAndType(setPassword)}
-                                    placeholder="Ít nhất 8 ký tự, có chữ và số"
-                                    error={fieldErrors.password}
-                                />
-                                <InputField
-                                    label="Xác nhận mật khẩu"
-                                    name="confirmPassword"
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={clearAndType(setConfirmPassword)}
-                                    placeholder="Nhập lại mật khẩu"
-                                />
-
-                                <div className="pt-4">
-                                    <Button
-                                        type="submit"
-                                        variant="primary"
-                                        className="w-full"
-                                        isLoading={registerLoading}
-                                    >
-                                        Đăng ký
-                                    </Button>
-                                </div>
-                            </form>
-
-                            <p className="mt-6 text-center text-sm text-slate-600">
-                                Đã có tài khoản?{' '}
-                                <Link
-                                    to="/login"
-                                    className="font-medium text-blue-600 hover:text-blue-500"
-                                >
-                                    Đăng nhập
-                                </Link>
-                            </p>
-                        </>
+                <form onSubmit={handleSubmitOtp} className="space-y-6">
+                    <OtpBoxes
+                        value={otp}
+                        onChange={(v) => {
+                            setOtp(v);
+                            clearErrors();
+                            setResendHint(null);
+                        }}
+                        disabled={verifyEmailLoading}
+                    />
+                    {fieldErrors.otp && (
+                        <p className="text-center text-xs text-error">{fieldErrors.otp}</p>
                     )}
+
+                    <button
+                        type="submit"
+                        disabled={verifyEmailLoading}
+                        className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-on-primary transition-all hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                        <span>{verifyEmailLoading ? 'Verifying…' : 'Verify Account'}</span>
+                        {!verifyEmailLoading && (
+                            <span className="material-symbols-outlined text-[20px]">verified</span>
+                        )}
+                    </button>
+
+                    <p className="text-center text-sm text-on-surface-variant">
+                        Didn&apos;t get the code?{' '}
+                        <button
+                            type="button"
+                            onClick={handleResendOtp}
+                            disabled={resendOtpLoading || verifyEmailLoading}
+                            className="font-semibold text-primary hover:underline disabled:opacity-60"
+                        >
+                            {resendOtpLoading ? 'Sending…' : 'Resend'}
+                        </button>
+                    </p>
+                </form>
+
+                <p className="text-center text-sm text-on-surface-variant">
+                    <Link to="/login" className="font-medium text-primary hover:underline">
+                        Back to login
+                    </Link>
+                </p>
+            </div>
+        );
+    } else {
+        content = (
+            <div className="p-8 md:p-10">
+                <div className="space-y-6">
+                    <div className="text-center">
+                        <h2 className="text-2xl font-semibold text-on-surface">Create your account</h2>
+                        <p className="mt-1 text-base text-on-surface-variant">
+                            Join UTEShop — verification code sent to your email
+                        </p>
+                    </div>
+
+                    {(error || localError) && (
+                        <div
+                            className="rounded-xl border border-error/20 bg-red-50 px-4 py-3 text-sm text-error"
+                            role="alert"
+                        >
+                            {localError || error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmitRegister} className="space-y-4">
+                        <AuthField
+                            id="register-username"
+                            label="Username"
+                            icon="person"
+                            value={username}
+                            onChange={(e) => {
+                                setUsername(e.target.value);
+                                clearErrors();
+                            }}
+                            placeholder="3–50 characters"
+                            autoComplete="username"
+                            error={fieldErrors.username}
+                        />
+
+                        <AuthField
+                            id="register-fullname"
+                            label="Full name"
+                            icon="badge"
+                            value={fullName}
+                            onChange={(e) => {
+                                setFullName(e.target.value);
+                                clearErrors();
+                            }}
+                            placeholder="Nguyen Van A"
+                            autoComplete="name"
+                            error={fieldErrors.fullName}
+                        />
+
+                        <AuthField
+                            id="register-email"
+                            label="Student Email"
+                            icon="alternate_email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                clearErrors();
+                            }}
+                            placeholder="student@university.edu"
+                            autoComplete="email"
+                            error={fieldErrors.email}
+                        />
+
+                        <AuthField
+                            id="register-student-id"
+                            label="Student ID (optional)"
+                            icon="numbers"
+                            value={studentId}
+                            onChange={(e) => {
+                                setStudentId(e.target.value);
+                                clearErrors();
+                            }}
+                            placeholder="21110001"
+                            error={fieldErrors.studentId}
+                        />
+
+                        <AuthField
+                            id="register-major"
+                            label="Major (optional)"
+                            icon="school"
+                            as="select"
+                            value={majorId}
+                            onChange={(e) => {
+                                setMajorId(e.target.value);
+                                clearErrors();
+                            }}
+                            error={fieldErrors.majorId}
+                        >
+                            <option value="">Select your degree program</option>
+                            {majors.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                    {m.name}
+                                </option>
+                            ))}
+                        </AuthField>
+
+                        <AuthField
+                            id="register-password"
+                            label="Password"
+                            icon="lock"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                clearErrors();
+                            }}
+                            placeholder="Min. 8 chars, letter + number"
+                            autoComplete="new-password"
+                            error={fieldErrors.password}
+                            rightSlot={passwordToggle(showPassword, setShowPassword)}
+                        />
+
+                        <AuthField
+                            id="register-confirm"
+                            label="Confirm password"
+                            icon="lock"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => {
+                                setConfirmPassword(e.target.value);
+                                clearErrors();
+                            }}
+                            placeholder="Re-enter password"
+                            autoComplete="new-password"
+                            rightSlot={passwordToggle(showConfirmPassword, setShowConfirmPassword)}
+                        />
+
+                        <button
+                            type="submit"
+                            disabled={registerLoading}
+                            className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-on-primary transition-all hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                            <span>{registerLoading ? 'Creating account…' : 'Create Account'}</span>
+                            {!registerLoading && (
+                                <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                            )}
+                        </button>
+                    </form>
+
+                    <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-outline-variant/30" />
+                        <span className="mx-4 shrink-0 text-xs font-semibold uppercase tracking-widest text-outline">
+                            Or Secure SSO
+                        </span>
+                        <div className="flex-grow border-t border-outline-variant/30" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            type="button"
+                            disabled
+                            title="Coming soon"
+                            className="group flex h-12 items-center justify-center rounded-xl border border-outline-variant/40 transition-all hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <span className="material-symbols-outlined mr-2 text-on-surface-variant group-hover:text-primary">
+                                school
+                            </span>
+                            <span className="text-xs text-on-surface">EDU Login</span>
+                        </button>
+                        <button
+                            type="button"
+                            disabled
+                            title="Coming soon"
+                            className="group flex h-12 items-center justify-center rounded-xl border border-outline-variant/40 transition-all hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <span className="material-symbols-outlined mr-2 text-on-surface-variant group-hover:text-primary">
+                                token
+                            </span>
+                            <span className="text-xs text-on-surface">SAML 2.0</span>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        );
+    }
+
+    return (
+        <AuthShell activeTab="signup" secondaryLink={loginSecondary}>
+            {content}
+        </AuthShell>
     );
 };
 

@@ -1,0 +1,11 @@
+[
+  {
+    "code": "BACK2SCHOOL20",
+    "name": "Back to School — Merchandise 20%",
+    "type": "percentage",
+    "value": 20,
+    "minOrderAmount": 30,
+    "categorySlug": "merchandise",
+    "isActive": true
+  }
+]

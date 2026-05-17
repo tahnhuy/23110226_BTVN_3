@@ -93,8 +93,25 @@ const updateUserProfile = async (userId, updateData, otp) => {
 };
 
 const getUserPublicById = async (userId) => {
-    const user = await User.findByPk(userId, {
-        attributes: ['id', 'username', 'email', 'fullName', 'phone', 'address', 'role', 'status', 'createdAt', 'updatedAt']
+    const { User: UserModel, Major } = require('../models');
+    const user = await UserModel.findByPk(userId, {
+        attributes: [
+            'id',
+            'username',
+            'email',
+            'fullName',
+            'phone',
+            'address',
+            'role',
+            'status',
+            'studentId',
+            'majorId',
+            'avatarUrl',
+            'emailVerifiedAt',
+            'createdAt',
+            'updatedAt'
+        ],
+        include: [{ model: Major, as: 'major', attributes: ['id', 'code', 'name'], required: false }]
     });
 
     if (!user) {

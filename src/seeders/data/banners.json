@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Back to School: 20% Off All Merchandise.",
+    "subtitle": "Seasonal Sale",
+    "badgeText": "Seasonal Sale",
+    "linkUrl": "/#featured",
+    "placement": "promo_left",
+    "sortOrder": 1,
+    "isActive": true
+  },
+  {
+    "title": "Starter Kits for Freshmen: Everything you need for Circuit Design 101.",
+    "subtitle": "New Arrivals",
+    "badgeText": "New Arrivals",
+    "linkUrl": "/#featured",
+    "placement": "promo_right",
+    "sortOrder": 2,
+    "isActive": true
+  }
+]
