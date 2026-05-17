@@ -19,17 +19,6 @@ const TEXT_MUTED = '#6B7280';
 const SURFACE = '#F3F3FE';
 const PAGE_BG = '#FAF8FF';
 
-const navLinks = [
-  { label: 'Home', href: '#', active: true },
-  { label: 'Categories', href: '#categories' },
-  { label: 'Study Tools', href: '#featured' },
-  { label: 'Technology', href: '#featured' },
-  { label: 'Merchandise', href: '#featured' },
-  { label: 'Student Life', href: '#featured' },
-  { label: 'Second-hand', href: '#featured' },
-  { label: 'Support', href: '#support' },
-];
-
 const categories = [
   { label: 'University Merchandise', Icon: FiAward },
   { label: 'Study Tools', Icon: FiBook },
@@ -75,63 +64,6 @@ const majors = [
   'Civil Engineering',
 ];
 
-function ShopHeader() {
-  return (
-    <header
-      className="sticky top-0 z-50 w-full border-b border-black/5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
-      style={{ backgroundColor: 'rgba(250, 248, 255, 0.8)', backdropFilter: 'blur(24px)' }}
-    >
-      <div className="mx-auto flex h-20 w-full max-w-[1280px] items-center justify-between gap-8 px-6 lg:px-8">
-        <div className="flex min-w-0 flex-1 items-center gap-8">
-          <Link to="/" className="shrink-0 font-inter text-2xl font-semibold" style={{ color: PRIMARY }}>
-            UTEShop
-          </Link>
-          <nav className="hidden items-center gap-6 xl:flex" aria-label="Main">
-            {navLinks.map(({ label, href, active }) => (
-              <a
-                key={label}
-                href={href}
-                className="font-inter text-sm font-medium leading-5 transition-colors"
-                style={{
-                  color: active ? PRIMARY : TEXT_BODY,
-                  borderBottom: active ? `2px solid ${PRIMARY}` : '2px solid transparent',
-                  paddingBottom: active ? '2px' : '0',
-                }}
-              >
-                {label}
-              </a>
-            ))}
-          </nav>
-        </div>
-        <div className="flex shrink-0 items-center gap-[18px]">
-          <button
-            type="button"
-            className="rounded-lg p-2 transition hover:bg-black/5"
-            style={{ color: TEXT_BODY }}
-            aria-label="Search"
-          >
-            <FiSearch className="h-6 w-6" strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            className="relative rounded-lg p-2 transition hover:bg-black/5"
-            style={{ color: TEXT_BODY }}
-            aria-label="Cart, 2 items"
-          >
-            <FiShoppingCart className="h-6 w-6" strokeWidth={1.75} />
-            <span
-              className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-inter text-[10px] font-medium text-white"
-              style={{ backgroundColor: PRIMARY }}
-            >
-              2
-            </span>
-          </button>
-        </div>
-      </div>
-    </header>
-  );
-}
-
 function HeroSection() {
   return (
     <section className="relative w-full overflow-hidden bg-white">
@@ -162,13 +94,13 @@ function HeroSection() {
             >
               Shop Now
             </a>
-            <a
-              href="#categories"
+            <Link
+              to="/categories"
               className="inline-flex h-14 items-center justify-center rounded-full px-8 font-inter text-base font-medium shadow-[0_10px_30px_rgba(0,0,0,0.04)] transition hover:bg-gray-200"
               style={{ backgroundColor: '#F5F5F7', color: TEXT }}
             >
               Explore Categories
-            </a>
+            </Link>
           </div>
         </div>
         <div className="relative">
@@ -495,8 +427,7 @@ function ShopFooter() {
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen font-inter" style={{ backgroundColor: PAGE_BG, color: TEXT }}>
-      <ShopHeader />
+    <div style={{ backgroundColor: PAGE_BG, color: TEXT }}>
       <main>
         <HeroSection />
         <CategorySection />

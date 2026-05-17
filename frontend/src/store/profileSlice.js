@@ -7,7 +7,8 @@ export const fetchUserProfile = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.get("/users/me");
-      return response.data?.user ?? response.data;
+      const data = response?.data ?? response;
+      return data?.user ?? data;
     } catch (error) {
       const msg =
         typeof error === "string"
@@ -24,7 +25,8 @@ export const updateUserProfile = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.put("/users/profile", userData);
-      return response.data?.user ?? response.data;
+      const data = response?.data ?? response;
+      return data?.user ?? data;
     } catch (error) {
       const msg =
         typeof error === "string"

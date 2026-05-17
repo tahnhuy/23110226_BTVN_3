@@ -76,6 +76,7 @@ export function AuthFooter() {
 export default function AuthShell({
   children,
   activeTab,
+  showBrand = false,
   secondaryLink = {
     to: '/register',
     title: 'New Student? Sign up first.',
@@ -83,15 +84,15 @@ export default function AuthShell({
   }
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-surface text-on-surface">
-      <main className="relative flex flex-grow items-center justify-center overflow-hidden px-4 py-20 md:px-6">
+    <div className="flex min-h-[calc(100vh-5rem)] flex-col bg-surface text-on-surface">
+      <main className="relative flex flex-grow items-center justify-center overflow-hidden px-4 py-10 md:px-6 md:py-14">
         <div className="pointer-events-none absolute inset-0 -z-10 opacity-30" aria-hidden>
           <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute bottom-24 right-24 h-64 w-64 rounded-full bg-tertiary-fixed-dim/20 blur-3xl" />
         </div>
 
         <div className="z-10 w-full max-w-[480px]">
-          <AuthBrand />
+          {showBrand && <AuthBrand />}
 
           <div className="overflow-hidden rounded-[32px] border border-outline-variant/30 bg-surface-container-lowest shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
             <AuthTabs active={activeTab} />

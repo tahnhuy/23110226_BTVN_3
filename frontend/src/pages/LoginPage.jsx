@@ -10,7 +10,7 @@ const LoginPage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
-    const from = location.state?.from?.pathname || '/profile';
+    const from = location.state?.from?.pathname || '/';
     const justActivated = location.state?.justActivated === true;
 
     const { loginLoading, error, fieldErrors, user } = useSelector((state) => state.auth);
