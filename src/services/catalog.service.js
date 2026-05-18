@@ -147,6 +147,18 @@ const listProducts = async ({
                 ['viewCount', 'DESC']
             ];
             break;
+        case 'best_selling':
+            order = [
+                ['soldCount', 'DESC'],
+                ['viewCount', 'DESC']
+            ];
+            break;
+        case 'most_viewed':
+            order = [
+                ['viewCount', 'DESC'],
+                ['soldCount', 'DESC']
+            ];
+            break;
         default:
             order = [['createdAt', 'DESC']];
     }
@@ -448,13 +460,17 @@ const listActiveBanners = async () => {
     });
 };
 
+const TOP_RANKING_LIMIT = 10;
+
 const getHomePageData = async () => {
-    const [banners, categoriesData, featured, newest, bestSellers, majors] = await Promise.all([
+    const [banners, categoriesData, featured, newest, bestSellers, mostViewed, majors] =
+        await Promise.all([
         listActiveBanners(),
         listCategoriesWithCounts(),
         listProducts({ featured: true, limit: 3, sort: 'newest' }),
         listProducts({ limit: 4, sort: 'newest' }),
-        listProducts({ limit: 4, sort: 'popular' }),
+        listProducts({ limit: TOP_RANKING_LIMIT, sort: 'best_selling' }),
+        listProducts({ limit: TOP_RANKING_LIMIT, sort: 'most_viewed' }),
         Major.findAll({
             where: { isActive: true },
             order: [
@@ -473,6 +489,7 @@ const getHomePageData = async () => {
         featured: featured.products,
         newest: newest.products,
         bestSellers: bestSellers.products,
+        mostViewed: mostViewed.products,
         majors: majors.map((m) => m.toJSON())
     };
 };

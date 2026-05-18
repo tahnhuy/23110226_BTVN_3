@@ -10,11 +10,16 @@ const seedProducts = async (categorySlugToId, majorCodeToId) => {
         }
 
         const { image, majorCodes, categorySlug, ...productData } = row;
+        const stats = {
+            soldCount: row.soldCount ?? 0,
+            viewCount: row.viewCount ?? 0
+        };
 
         const [product, created] = await Product.findOrCreate({
             where: { slug: row.slug },
             defaults: {
                 ...productData,
+                ...stats,
                 categoryId,
                 productType: row.productType || 'standard',
                 status: 'active',
@@ -25,6 +30,7 @@ const seedProducts = async (categorySlugToId, majorCodeToId) => {
         if (!created) {
             await product.update({
                 ...productData,
+                ...stats,
                 categoryId,
                 productType: row.productType || 'standard',
                 status: 'active'

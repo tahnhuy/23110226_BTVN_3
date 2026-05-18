@@ -72,3 +72,15 @@
   background: var(--color-primary);
 }
 
+.product-ranking-carousel .swiper {
+  padding-bottom: 2.5rem;
+}
+
+.product-ranking-carousel .swiper-pagination {
+  bottom: 0;
+}
+
+.product-ranking-carousel .swiper-pagination-bullet-active {
+  background: var(--color-primary);
+}
+

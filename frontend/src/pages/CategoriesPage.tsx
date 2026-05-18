@@ -10,7 +10,9 @@ const SORT_OPTIONS = [
     { value: 'newest', label: 'Newest Arrival' },
     { value: 'price_asc', label: 'Price: Low to High' },
     { value: 'price_desc', label: 'Price: High to Low' },
-    { value: 'popular', label: 'Most Popular' }
+    { value: 'popular', label: 'Most Popular' },
+    { value: 'best_selling', label: 'Best Selling' },
+    { value: 'most_viewed', label: 'Most Viewed' }
 ];
 
 const HERO_IMAGE = '/PremiumLaptop.png';

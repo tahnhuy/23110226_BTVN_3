@@ -17,6 +17,7 @@ import axiosInstance from '../services/axiosConfig';
 import { useAppSelector } from '../store/hooks';
 import { formatPrice } from '../utils/formatPrice';
 import type { ApiEnvelope } from '../types/api';
+import ProductRankingCarousel from '../components/catalog/ProductRankingCarousel';
 import type { CatalogProduct, CategoryWithCount, HomePageData, Major, PromoBanner } from '../types/catalog';
 
 const PRIMARY = '#004AC6';
@@ -564,8 +565,13 @@ function ShopFooter() {
                         </p>
                         <ul className="mt-4 flex flex-col gap-4 font-inter text-sm" style={{ color: TEXT_BODY }}>
                             <li>
-                                <Link to="/categories?sort=popular" className="hover:underline">
+                                <Link to="/categories?sort=best_selling" className="hover:underline">
                                     Best sellers
+                                </Link>
+                            </li>
+                            <li>
+                                <Link to="/categories?sort=most_viewed" className="hover:underline">
+                                    Most viewed
                                 </Link>
                             </li>
                             <li>
@@ -627,6 +633,7 @@ export default function HomePage() {
     const featured = data?.featured?.length ? data.featured : (data?.newest?.slice(0, 3) ?? []);
     const newest = data?.newest ?? [];
     const bestSellers = data?.bestSellers ?? [];
+    const mostViewed = data?.mostViewed ?? [];
     const categories = data?.categories ?? [];
     const banners = data?.banners ?? [];
     const majors = data?.majors ?? [];
@@ -661,12 +668,20 @@ export default function HomePage() {
                             products={newest}
                             viewAllTo="/categories?sort=newest"
                         />
-                        <ProductSection
+                        <ProductRankingCarousel
                             id="bestsellers"
                             title="Best Sellers"
                             products={bestSellers}
-                            viewAllTo="/categories?sort=popular"
+                            viewAllTo="/categories?sort=best_selling"
+                            statType="sold"
                             background={SURFACE}
+                        />
+                        <ProductRankingCarousel
+                            id="mostviewed"
+                            title="Most Viewed"
+                            products={mostViewed}
+                            viewAllTo="/categories?sort=most_viewed"
+                            statType="views"
                         />
                         <MajorFilterSection majors={majors} />
                     </>
