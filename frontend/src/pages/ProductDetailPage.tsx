@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import axiosInstance from '../services/axiosConfig';
 import { formatPrice } from '../utils/formatPrice';
-import { addToCart } from '../utils/cartStorage';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { addToCart, clearCartError } from '../store/cartSlice';
 import ProductImageGallery from '../components/catalog/ProductImageGallery';
 import QuantitySelector from '../components/catalog/QuantitySelector';
 import SimilarProducts from '../components/catalog/SimilarProducts';
@@ -150,6 +151,11 @@ function ProductDetailFooter() {
 
 export default function ProductDetailPage() {
     const { slug } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const user = useAppSelector((state) => state.auth.user);
+    const { addLoading, error: cartError } = useAppSelector((state) => state.cart);
     const [product, setProduct] = useState<ProductDetail | null>(null);
     const [similarProducts, setSimilarProducts] = useState<CatalogProduct[]>([]);
     const [loading, setLoading] = useState(true);
@@ -261,18 +267,20 @@ export default function ProductDetailPage() {
         );
     }
 
-    const handleAddToCart = () => {
+    const handleAddToCart = async () => {
         if (!inStock) return;
-        addToCart({
-            productId: product.id,
-            slug: product.slug,
-            name: product.name,
-            price: product.price,
-            imageUrl: product.imageUrl ?? images[0]?.url ?? null,
-            quantity
-        });
-        setCartMessage(`Added ${quantity} × ${product.name} to cart`);
-        window.setTimeout(() => setCartMessage(null), 3500);
+        if (!user) {
+            navigate('/login', { state: { from: location } });
+            return;
+        }
+        dispatch(clearCartError());
+        const result = await dispatch(
+            addToCart({ productId: product.id, quantity })
+        );
+        if (addToCart.fulfilled.match(result)) {
+            setCartMessage(`Đã thêm ${quantity} × ${product.name} vào giỏ hàng`);
+            window.setTimeout(() => setCartMessage(null), 3500);
+        }
     };
 
     return (
@@ -398,16 +406,30 @@ export default function ProductDetailPage() {
                                 {cartMessage}
                             </div>
                         )}
+                        {cartError && (
+                            <div
+                                className="mb-4 rounded-xl border border-error/30 bg-error/5 px-4 py-3 text-sm text-error"
+                                role="alert"
+                            >
+                                {cartError}
+                            </div>
+                        )}
 
                         <div className="mb-10 space-y-4">
                             <button
                                 type="button"
                                 onClick={handleAddToCart}
-                                disabled={!inStock}
+                                disabled={!inStock || addLoading}
                                 className="flex h-14 w-full items-center justify-center gap-2 rounded-[24px] bg-primary text-sm font-bold text-on-primary transition hover:opacity-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <span className="material-symbols-outlined">shopping_cart</span>
-                                {inStock ? 'Add to Cart' : 'Out of Stock'}
+                                {!inStock
+                                    ? 'Out of Stock'
+                                    : addLoading
+                                      ? 'Đang thêm...'
+                                      : user
+                                        ? 'Add to Cart'
+                                        : 'Đăng nhập để thêm vào giỏ'}
                             </button>
                             <button
                                 type="button"

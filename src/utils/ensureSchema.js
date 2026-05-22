@@ -26,4 +26,46 @@ const ensureUserColumns = async (sequelize) => {
     await addIfMissing('emailVerifiedAt', { type: DataTypes.DATE, allowNull: true });
 };
 
-module.exports = { ensureUserColumns };
+const ensureCartItemColumns = async (sequelize) => {
+    const qi = sequelize.getQueryInterface();
+    let table;
+
+    try {
+        table = await qi.describeTable('cart_items');
+    } catch {
+        return;
+    }
+
+    if (!table.isSelected) {
+        await qi.addColumn('cart_items', 'isSelected', {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: true
+        });
+        console.log('  + cart_items.isSelected');
+    }
+};
+
+const ensureOrderColumns = async (sequelize) => {
+    const qi = sequelize.getQueryInterface();
+    let table;
+
+    try {
+        table = await qi.describeTable('orders');
+    } catch {
+        return;
+    }
+
+    const addIfMissing = async (name, spec) => {
+        if (!table[name]) {
+            await qi.addColumn('orders', name, spec);
+            console.log(`  + orders.${name}`);
+        }
+    };
+
+    await addIfMissing('confirmedAt', { type: DataTypes.DATE, allowNull: true });
+    await addIfMissing('cancellationRequestedAt', { type: DataTypes.DATE, allowNull: true });
+    await addIfMissing('customerCancelReason', { type: DataTypes.TEXT, allowNull: true });
+};
+
+module.exports = { ensureUserColumns, ensureCartItemColumns, ensureOrderColumns };

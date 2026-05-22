@@ -1,4 +1,16 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const requiredDbEnv = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const missingDbEnv = requiredDbEnv.filter((key) => !process.env[key]);
+if (missingDbEnv.length > 0) {
+    console.error(
+        `❌ Thiếu biến môi trường trong .env: ${missingDbEnv.join(', ')}\n` +
+            '   Sao chép .env.example → .env và điền DB_USER, DB_PASSWORD, ...'
+    );
+    process.exit(1);
+}
+
 const app = require('./app');
 
 // Import config
@@ -14,10 +26,26 @@ const startServer = async () => {
         console.log('✅ MySQL (Docker) connected successfully.');
 
         const { syncDatabase } = require('./models');
-        const { ensureUserColumns } = require('./utils/ensureSchema');
+        const { ensureUserColumns, ensureCartItemColumns, ensureOrderColumns } =
+            require('./utils/ensureSchema');
         await syncDatabase({ alter: false });
         await ensureUserColumns(sequelize);
+        await ensureCartItemColumns(sequelize);
+        await ensureOrderColumns(sequelize);
         console.log('✅ MySQL tables synchronized.');
+
+        const { runAutoConfirmPendingOrders } = require('./services/order.service');
+        runAutoConfirmPendingOrders().catch((err) =>
+            console.error('Auto-confirm orders error:', err.message)
+        );
+        setInterval(
+            () => {
+                runAutoConfirmPendingOrders().catch((err) =>
+                    console.error('Auto-confirm orders error:', err.message)
+                );
+            },
+            60 * 1000
+        );
 
         // 2. Kết nối Redis
         await redisClient.connect();

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { loginUser, clearAuthError } from '../store/authSlice';
+import { fetchCart } from '../store/cartSlice';
 import AuthShell from '../components/auth/AuthShell';
 
 const REMEMBER_KEY = 'uteshop_remember_email';
@@ -37,6 +38,7 @@ const LoginPage = () => {
             } else {
                 localStorage.removeItem(REMEMBER_KEY);
             }
+            dispatch(fetchCart());
             navigate(from, { replace: true });
             return;
         }

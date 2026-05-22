@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { Location } from 'react-router-dom';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchCart } from '../../store/cartSlice';
 import type { AuthUser } from '../../types/auth';
 
 const PRIMARY = '#004AC6';
@@ -49,7 +51,18 @@ function isNavActive(location: Location, link: NavLink): boolean {
 
 export default function ShopHeader() {
     const location = useLocation();
+    const dispatch = useAppDispatch();
     const user = useAppSelector((state) => state.auth.user);
+    const itemCount = useAppSelector((state) => state.cart.summary.itemCount);
+
+    useEffect(() => {
+        if (user) {
+            dispatch(fetchCart());
+        }
+    }, [user, dispatch]);
+
+    const cartTo = user ? '/cart' : '/login';
+    const cartState = user ? undefined : { from: { pathname: '/cart' } };
 
     return (
         <header
@@ -90,20 +103,25 @@ export default function ShopHeader() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2 sm:gap-[18px]">
-                    <button
-                        type="button"
+                    <Link
+                        to={cartTo}
+                        state={cartState}
                         className="relative rounded-lg p-2 transition hover:bg-black/5 active:scale-95"
                         style={{ color: PRIMARY }}
-                        aria-label="Cart, 2 items"
+                        aria-label={
+                            itemCount > 0 ? `Giỏ hàng, ${itemCount} sản phẩm` : 'Giỏ hàng'
+                        }
                     >
                         <span className="material-symbols-outlined">shopping_cart</span>
-                        <span
-                            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-inter text-[10px] font-bold text-on-tertiary"
-                            style={{ backgroundColor: '#943700' }}
-                        >
-                            2
-                        </span>
-                    </button>
+                        {user && itemCount > 0 && (
+                            <span
+                                className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-inter text-[10px] font-bold text-on-tertiary"
+                                style={{ backgroundColor: '#943700' }}
+                            >
+                                {itemCount > 99 ? '99+' : itemCount}
+                            </span>
+                        )}
+                    </Link>
 
                     <Link
                         to="/categories"

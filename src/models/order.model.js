@@ -94,6 +94,18 @@ const Order = sequelize.define(
         cancelledAt: {
             type: DataTypes.DATE,
             allowNull: true
+        },
+        confirmedAt: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        cancellationRequestedAt: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        customerCancelReason: {
+            type: DataTypes.TEXT,
+            allowNull: true
         }
     },
     {

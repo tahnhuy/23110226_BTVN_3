@@ -12,39 +12,10 @@ const DEFAULT_AVATAR =
 
 const SIDEBAR_ITEMS = [
     { id: 'overview', label: 'Overview', icon: 'dashboard', filled: true },
-    { id: 'orders', label: 'Order History', icon: 'shopping_bag' },
+    { id: 'orders', label: 'Order History', icon: 'shopping_bag', href: '/orders' },
     { id: 'reviews', label: 'My Reviews', icon: 'reviews' },
     { id: 'wishlist', label: 'Wishlist', icon: 'favorite' },
     { id: 'settings', label: 'Account Settings', icon: 'settings' }
-];
-
-const MOCK_ORDERS = [
-    {
-        id: 'UTE-82741',
-        status: 'In Transit',
-        statusClass: 'bg-tertiary-fixed text-on-tertiary-fixed-variant',
-        title: 'Precision Workstation Laptop 16"',
-        detail: 'Arriving by Thursday, Oct 24',
-        price: '$1,899.00',
-        priceClass: 'text-primary',
-        image: '/ArduinoKitStarterPro.png',
-        action: 'Track Order',
-        actionClass: 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high',
-        progress: 2
-    },
-    {
-        id: 'UTE-81920',
-        status: 'Delivered Sep 12',
-        statusClass: 'bg-surface-container-highest text-on-surface-variant',
-        title: 'Calculus for Engineers: 5th Edition',
-        detail: 'Package left with residential advisor',
-        price: '$112.50',
-        priceClass: 'text-on-surface',
-        image: '/OHoodieUteLimited.png',
-        action: 'Reorder',
-        actionClass: 'border border-outline-variant text-on-surface-variant hover:bg-surface-container-high',
-        progress: 0
-    }
 ];
 
 function displayName(user: ProfileUser | null, authUser: AuthUser | null) {
@@ -58,21 +29,6 @@ function profileSubtitle(user: ProfileUser | null) {
     if (major) parts.push(major);
     if (sid) parts.push(`ID: ${sid}`);
     return parts.length ? parts.join(' • ') : user?.email || '';
-}
-
-function OrderProgress({ filled }: { filled: number }) {
-    return (
-        <div className="mt-6 flex items-center gap-2">
-            {[0, 1, 2, 3].map((i) => (
-                <div
-                    key={i}
-                    className={`h-1.5 flex-1 rounded-full ${
-                        i < filled ? 'bg-primary' : 'bg-surface-container'
-                    }`}
-                />
-            ))}
-        </div>
-    );
 }
 
 function ProfileFooter() {
@@ -146,9 +102,13 @@ const ProfilePage = () => {
         navigate('/login', { replace: true });
     };
 
-    const scrollTo = (id: string) => {
-        setActiveSection(id);
-        document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const handleSectionNav = (item: (typeof SIDEBAR_ITEMS)[number]) => {
+        if ('href' in item && item.href) {
+            navigate(item.href);
+            return;
+        }
+        setActiveSection(item.id);
+        document.getElementById(`section-${item.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     const name = displayName(user, authUser);
@@ -238,7 +198,7 @@ const ProfilePage = () => {
                                             <button
                                                 key={item.id}
                                                 type="button"
-                                                onClick={() => scrollTo(item.id)}
+                                                onClick={() => handleSectionNav(item)}
                                                 className={`flex items-center gap-3 rounded-xl p-4 text-left transition-all ${
                                                     active
                                                         ? 'bg-primary font-bold text-on-primary shadow-sm'
@@ -277,7 +237,7 @@ const ProfilePage = () => {
                                             <button
                                                 key={item.id}
                                                 type="button"
-                                                onClick={() => scrollTo(item.id)}
+                                                onClick={() => handleSectionNav(item)}
                                                 className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold ${
                                                     activeSection === item.id
                                                         ? 'bg-primary text-on-primary'
@@ -286,73 +246,6 @@ const ProfilePage = () => {
                                             >
                                                 {item.label}
                                             </button>
-                                        ))}
-                                    </div>
-                                </section>
-
-                                {/* Orders */}
-                                <section id="section-orders">
-                                    <div className="mb-8 flex items-center justify-between">
-                                        <h2 className="text-2xl font-semibold text-on-surface">Order History</h2>
-                                        <button
-                                            type="button"
-                                            className="text-sm font-medium text-primary hover:underline"
-                                        >
-                                            View All Orders
-                                        </button>
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        {MOCK_ORDERS.map((order) => (
-                                            <div
-                                                key={order.id}
-                                                className="soft-shadow rounded-[24px] border border-transparent bg-surface-container-lowest p-6 transition-all hover:border-primary/20"
-                                            >
-                                                <div className="flex flex-col justify-between gap-4 md:flex-row">
-                                                    <div className="flex gap-4">
-                                                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container">
-                                                            <img
-                                                                src={order.image}
-                                                                alt=""
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <div className="mb-1 flex items-center gap-2">
-                                                                <span
-                                                                    className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${order.statusClass}`}
-                                                                >
-                                                                    {order.status}
-                                                                </span>
-                                                                <span className="text-xs text-on-surface-variant">
-                                                                    #{order.id}
-                                                                </span>
-                                                            </div>
-                                                            <h3 className="text-sm font-medium text-on-surface">
-                                                                {order.title}
-                                                            </h3>
-                                                            <p className="text-sm text-on-surface-variant">
-                                                                {order.detail}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-end justify-between md:flex-col md:items-end">
-                                                        <span
-                                                            className={`text-2xl font-semibold ${order.priceClass}`}
-                                                        >
-                                                            {order.price}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            className={`mt-2 rounded-full px-6 py-2 text-xs font-semibold transition-colors ${order.actionClass}`}
-                                                        >
-                                                            {order.action}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                {order.progress > 0 && (
-                                                    <OrderProgress filled={order.progress} />
-                                                )}
-                                            </div>
                                         ))}
                                     </div>
                                 </section>

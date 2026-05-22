@@ -29,6 +29,11 @@ const CartItem = sequelize.define(
         unitPrice: {
             type: DataTypes.DECIMAL(12, 2),
             allowNull: false
+        },
+        isSelected: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: true
         }
     },
     {
